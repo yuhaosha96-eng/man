@@ -269,6 +269,12 @@
   .dlg .rowbtns button.primary { background: var(--ink); color: #fdfaf1; border-color: transparent; }
   .dlg .rowbtns button.danger { color: var(--warn); }
   .dlg .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 14.5px; }
+  .cloudbox { margin-top: 18px; padding-top: 14px; border-top: 1px dashed rgba(120, 108, 84, 0.28); }
+  .cloudbox .tip { font-size: 12px; color: var(--ink-faint); margin: 6px 0 0; line-height: 1.6; }
+  .cloudrow { display: flex; gap: 8px; margin-top: 12px; }
+  .cloudrow button { flex: 1; min-height: 42px; border-radius: 11px; border: 1px solid rgba(120, 108, 84, 0.3); background: #fff; color: var(--ink); font: inherit; font-size: 14px; font-weight: 650; }
+  .cloud-status { margin-top: 10px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.6; }
+  .cloud-status.err { color: var(--warn); }
   .toast {
     position: fixed; left: 50%; bottom: calc(132px + var(--safe-bottom));
     transform: translate(-50%, 8px); opacity: 0;
@@ -362,7 +368,24 @@
       <span>自动查 Tatoeba 例句</span>
       <input type="checkbox" id="opt-examples" checked>
     </div>
-    <p style="margin-top:14px">笔记存在这台设备（IndexedDB，另有一份 localStorage 镜像）。图片只存在本机，换设备请用「备份 → 导出」。</p>
+    <p style="margin-top:14px">笔记存在这台设备（IndexedDB，另有一份 localStorage 镜像）。图片只存在本机。</p>
+
+    <div class="cloudbox">
+      <div class="switch">
+        <span><b>自动备份到 GitHub</b></span>
+        <input type="checkbox" id="opt-cloud">
+      </div>
+      <p class="tip">开启后会在这台设备上自动把整本笔记（含图片）提交到你的仓库，平时不用管。</p>
+      <label for="opt-cloud-token">GitHub token（只需要这个仓库的 Contents 读写权限）</label>
+      <input type="password" id="opt-cloud-token" placeholder="github_pat_... 或 ghp_..." autocomplete="off" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <label for="opt-cloud-repo">仓库</label>
+      <input type="text" id="opt-cloud-repo" placeholder="用户名/仓库名" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="cloudrow">
+        <button type="button" id="btn-cloud-now">立即备份</button>
+        <button type="button" id="btn-cloud-restore">从云端恢复</button>
+      </div>
+      <div class="cloud-status" id="cloud-status">未开启</div>
+    </div>
     <div class="rowbtns">
       <button type="button" data-close>取消</button>
       <button type="button" class="primary" id="btn-save-settings">保存</button>
@@ -577,6 +600,7 @@
     if (ok) state.savedAt = doc.savedAt;
     updateMeta();
     if (!ok) toast('存储写入失败，请立即导出备份', true);
+    scheduleCloudBackup();
   }
 
   /* ------------------------------------------------------------ dictionary */
@@ -1287,6 +1311,166 @@
   document.getElementById('pen-done').addEventListener('click', function () { setPenMode(false); });
   window.addEventListener('resize', inkRedrawSoon);
 
+  /* --------------------------------------------------------------- cloud */
+
+  var CLOUD_KEY = 'vocab-notebook:cloud:v1';
+  state.cloud = { enabled: false, token: '', repo: 'yuhaosha96-eng/man', path: 'backup/notebook.json', lastAt: 0, lastStatus: '' };
+  var cloudTimer = null;
+
+  function loadCloud() {
+    try {
+      var raw = localStorage.getItem(CLOUD_KEY);
+      if (raw) state.cloud = Object.assign(state.cloud, JSON.parse(raw));
+    } catch (error) {}
+  }
+
+  function saveCloud() {
+    try {
+      localStorage.setItem(CLOUD_KEY, JSON.stringify({
+        enabled: state.cloud.enabled,
+        token: state.cloud.token,
+        repo: state.cloud.repo,
+        path: state.cloud.path,
+        lastAt: state.cloud.lastAt,
+        lastStatus: state.cloud.lastStatus,
+      }));
+    } catch (error) {}
+  }
+
+  function cloudLabel() {
+    if (!state.cloud.enabled || !state.cloud.token) return '未开启';
+    if (state.cloud.lastStatus && state.cloud.lastStatus.indexOf('失败') === 0) return '上次备份' + state.cloud.lastStatus;
+    if (!state.cloud.lastAt) return '已开启，尚未备份';
+    return '上次备份 ' + new Date(state.cloud.lastAt).toLocaleString('zh-CN', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function b64EncodeUtf8(text) {
+    var bytes = new TextEncoder().encode(text);
+    var binary = '';
+    var chunk = 0x8000;
+    for (var i = 0; i < bytes.length; i += chunk) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+    }
+    return btoa(binary);
+  }
+
+  function b64DecodeUtf8(text) {
+    var binary = atob(String(text).replace(/\s/g, ''));
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+
+  async function cloudApi(path, options) {
+    var opts = options || {};
+    var res = await fetch('https://api.github.com' + path, {
+      method: opts.method || 'GET',
+      body: opts.body,
+      headers: {
+        authorization: 'Bearer ' + state.cloud.token,
+        accept: 'application/vnd.github+json',
+        'user-agent': 'vocab-notebook',
+        'x-github-api-version': '2022-11-28',
+      },
+    });
+    var text = await res.text();
+    var body = null;
+    try { body = text ? JSON.parse(text) : null; } catch (error) { body = text; }
+    return { ok: res.ok, status: res.status, body: body };
+  }
+
+  async function cloudBackup(silent) {
+    if (!state.cloud.enabled || !state.cloud.token) {
+      if (!silent) toast('先在设置里开启云端备份并填 token', true);
+      return false;
+    }
+    var parts = String(state.cloud.repo || '').split('/');
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      if (!silent) toast('仓库要写成 用户名/仓库名', true);
+      return false;
+    }
+    var json = JSON.stringify(serializeDoc());
+    if (json.length > 9500000) {
+      toast('笔记超过 9MB，自动备份跳过，请用「导出 JSON」', true);
+      return false;
+    }
+    var path = state.cloud.path || 'backup/notebook.json';
+    var endpoint = '/repos/' + parts[0] + '/' + parts[1] + '/contents/' + path;
+    try {
+      var existing = await cloudApi(endpoint);
+      var sha = existing.ok && existing.body && existing.body.sha ? existing.body.sha : null;
+      var payload = {
+        message: 'Vocab notebook backup ' + new Date().toISOString().slice(0, 16).replace('T', ' '),
+        content: b64EncodeUtf8(json),
+      };
+      if (sha) payload.sha = sha;
+      var put = await cloudApi(endpoint, { method: 'PUT', body: JSON.stringify(payload) });
+      if (!put.ok) {
+        state.cloud.lastStatus = '失败 ' + put.status;
+        saveCloud();
+        updateMeta();
+        refreshCloudStatus();
+        if (!silent) toast('云端备份失败（' + put.status + '），检查 token 权限', true);
+        return false;
+      }
+      state.cloud.lastAt = Date.now();
+      state.cloud.lastStatus = '成功';
+      saveCloud();
+      updateMeta();
+      refreshCloudStatus();
+      if (!silent) toast('已备份到云端');
+      return true;
+    } catch (error) {
+      state.cloud.lastStatus = '失败（网络）';
+      saveCloud();
+      updateMeta();
+        refreshCloudStatus();
+      if (!silent) toast('云端备份失败，检查网络', true);
+      return false;
+    }
+  }
+
+  function scheduleCloudBackup() {
+    if (!state.cloud.enabled || !state.cloud.token) return;
+    if (cloudTimer) clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(function () { cloudBackup(true); }, 90000);
+  }
+
+  async function cloudRestore() {
+    if (!state.cloud.enabled || !state.cloud.token) { toast('先在设置里开启云端备份并填 token', true); return; }
+    var parts = String(state.cloud.repo || '').split('/');
+    var path = state.cloud.path || 'backup/notebook.json';
+    toast('正在取回云端备份…');
+    var got = await cloudApi('/repos/' + parts[0] + '/' + parts[1] + '/contents/' + path);
+    if (!got.ok || !got.body || !got.body.content) { toast('云端还没有备份文件', true); return; }
+    try {
+      var doc = JSON.parse(b64DecodeUtf8(got.body.content));
+      if (!window.confirm('用云端备份（' + new Date(doc.savedAt || Date.now()).toLocaleString('zh-CN') + '，共 ' + (doc.pages || []).length + ' 页）替换当前笔记？')) return;
+      applyDoc(doc);
+      toast('已从云端恢复');
+    } catch (error) {
+      toast('云端文件解析失败', true);
+    }
+  }
+
+  function applyDoc(doc) {
+    var pages = doc.pages;
+    if (!pages && doc.entries) pages = [{ id: uid(), createdAt: Date.now(), entries: doc.entries }];
+    if (!Array.isArray(pages) || !pages.length) { toast('文件里没有内容', true); return; }
+    state.pages = pages.map(function (pg) {
+      return {
+        id: pg.id || uid(),
+        createdAt: pg.createdAt || Date.now(),
+        ink: Array.isArray(pg.ink) ? pg.ink : [],
+        entries: (pg.entries || []).map(normalizeEntry),
+      };
+    });
+    state.pageIndex = Math.min(doc.pageIndex || 0, state.pages.length - 1);
+    renderPage();
+    scheduleSave();
+    updateMeta();
+  }
+
   /* ------------------------------------------------------------- images */
 
   function compressImage(file) {
@@ -1441,8 +1625,36 @@
     document.getElementById('opt-examples').checked = !!state.settings.examples;
     document.getElementById('dlg-settings').showModal();
   });
+  document.getElementById('btn-cloud-now').addEventListener('click', function () {
+    state.cloud.enabled = document.getElementById('opt-cloud').checked;
+    state.cloud.token = document.getElementById('opt-cloud-token').value.trim();
+    state.cloud.repo = document.getElementById('opt-cloud-repo').value.trim() || 'yuhaosha96-eng/man';
+    saveCloud();
+    refreshCloudStatus();
+    cloudBackup(false);
+  });
+
+  document.getElementById('btn-cloud-restore').addEventListener('click', cloudRestore);
+
+  function refreshCloudStatus() {
+    var el = document.getElementById('cloud-status');
+    el.textContent = cloudLabel();
+    el.className = 'cloud-status' + (state.cloud.lastStatus && state.cloud.lastStatus.indexOf('失败') === 0 ? ' err' : '');
+  }
+
+  document.getElementById('btn-settings').addEventListener('click', function () {
+    document.getElementById('opt-cloud').checked = !!state.cloud.enabled;
+    document.getElementById('opt-cloud-token').value = state.cloud.token || '';
+    document.getElementById('opt-cloud-repo').value = state.cloud.repo || 'yuhaosha96-eng/man';
+    refreshCloudStatus();
+  });
+
   document.getElementById('btn-save-settings').addEventListener('click', function () {
     state.settings.apiKey = document.getElementById('opt-ai-key').value.trim();
+    state.cloud.enabled = document.getElementById('opt-cloud').checked;
+    state.cloud.token = document.getElementById('opt-cloud-token').value.trim();
+    state.cloud.repo = document.getElementById('opt-cloud-repo').value.trim() || 'yuhaosha96-eng/man';
+    saveCloud();
     state.settings.examples = document.getElementById('opt-examples').checked;
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (error) {}
     document.getElementById('dlg-settings').close();
@@ -1488,7 +1700,8 @@
       pg.entries.forEach(function (entry) { if (entry.kind !== 'image' && entry.word) words += 1; });
     });
     var stamp = state.dirty ? '保存中…' : (state.savedAt ? '已保存 ' + new Date(state.savedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '未保存');
-    els.meta.textContent = words + ' 个词 · ' + state.pages.length + ' 页 · ' + stamp;
+    var cloud = (state.cloud.enabled && state.cloud.token) ? (' · ☁ ' + (state.cloud.lastAt ? new Date(state.cloud.lastAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '待备份')) : '';
+    els.meta.textContent = words + ' 个词 · ' + state.pages.length + ' 页 · ' + stamp + cloud;
   }
 
   /* ---------------------------------------------------------------- boot */
@@ -1543,6 +1756,10 @@
     }
 
     state.loaded = true;
+    loadCloud();
+    if (state.cloud.enabled && state.cloud.token && Date.now() - (state.cloud.lastAt || 0) > 12 * 3600 * 1000) {
+      setTimeout(function () { cloudBackup(true); }, 4000);
+    }
     updateMeta();
     inkRedrawSoon();
 
