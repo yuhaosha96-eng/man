@@ -1516,7 +1516,10 @@
       ]);
     } catch (error) { doc = null; }
 
-    var pick = (doc && doc.pages && doc.pages.length) ? doc : mirror;
+    var pick = null;
+    if (doc && doc.pages && doc.pages.length) pick = doc;
+    else if (doc && doc.entries && doc.entries.length) pick = doc;
+    else if (mirror) pick = mirror;
     if (!pick) {
       state.pages = [{ id: uid(), createdAt: Date.now(), entries: [] }];
       state.pageIndex = 0;
