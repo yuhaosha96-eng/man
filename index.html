@@ -2,254 +2,329 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1113" media="(prefers-color-scheme: dark)">
-<meta name="apple-mobile-web-app-title" content="生词助手">
-<meta name="description" content="写下英文单词立即显示中文释义，粘贴整段英文逐词标注，生词本可导出 CSV。词库离线可用。">
-<title>生词助手</title>
+<meta name="apple-mobile-web-app-title" content="生词本">
+<meta name="theme-color" content="#e8e2d3">
+<meta name="description" content="横线纸生词本：用 Apple Pencil 写英文，自动附上中文释义、用法和例句。">
+<title>生词本</title>
 <style>
   :root {
-    --bg: #f5f6f8;
-    --card: #ffffff;
-    --card-border: rgba(15, 18, 24, 0.08);
-    --text: #16181c;
-    --muted: #59616e;
-    --accent: #2f6fed;
-    --accent-strong: #1f5fd0;
-    --accent-soft: rgba(47, 111, 237, 0.10);
-    --chip: rgba(15, 18, 24, 0.05);
-    --pos: #0f7b6c;
-    --danger: #c83838;
-    --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px rgba(16, 24, 40, 0.06);
-    --radius: 16px;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f1113;
-      --card: #191b1f;
-      --card-border: rgba(255, 255, 255, 0.08);
-      --text: #e9eaec;
-      --muted: #9aa2ad;
-      --accent: #6f9bff;
-      --accent-strong: #8fb2ff;
-      --accent-soft: rgba(111, 155, 255, 0.14);
-      --chip: rgba(255, 255, 255, 0.07);
-      --pos: #57c9b3;
-      --danger: #ff8a8a;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.35);
-    }
+    --desk: #ddd5c3;
+    --paper: #fdfaf1;
+    --rule: rgba(96, 122, 158, 0.34);
+    --margin: rgba(196, 92, 92, 0.55);
+    --ink: #1b2436;
+    --ink-soft: #55607a;
+    --ink-faint: #8b93a8;
+    --accent: #2f5fa8;
+    --accent-soft: rgba(47, 95, 168, 0.12);
+    --warn: #b4432f;
+    --line: 34px;
+    --safe-bottom: env(safe-area-inset-bottom);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { scroll-padding-top: 84px; -webkit-text-size-adjust: 100%; }
-  html, body { margin: 0; padding: 0; }
+  html, body { margin: 0; padding: 0; height: 100%; }
   body {
-    background: var(--bg);
-    color: var(--text);
-    font: 17px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
-    min-height: 100vh;
-    min-height: 100dvh;
+    background: var(--desk);
+    color: var(--ink);
+    font: 17px/var(--line) -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
     display: flex;
     flex-direction: column;
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
   }
-  header {
-    position: sticky; top: 0; z-index: 10;
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 16px 10px;
-    padding-top: calc(12px + env(safe-area-inset-top));
-    background: var(--bg);
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--card-border);
+
+  /* ---------- top bar ---------- */
+  .bar {
+    flex: none;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    background: linear-gradient(#efe9da, #e6dfcd);
+    border-bottom: 1px solid rgba(120, 110, 90, 0.25);
+    color: #4a4436;
   }
-  .brand { font-weight: 700; font-size: 19px; letter-spacing: 0.01em; flex: 1; min-width: 0; }
-  .brand small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tabs { display: flex; background: var(--chip); border-radius: 999px; padding: 3px; gap: 2px; flex: none; }
-  .tabs button {
-    border: 0; background: transparent; color: var(--muted);
-    font: inherit; font-size: 15px; font-weight: 600;
-    padding: 7px 14px; min-height: 44px; border-radius: 999px; cursor: pointer;
+  .bar h1 { font-size: 17px; margin: 0; font-weight: 700; letter-spacing: .02em; }
+  .bar .meta { font-size: 12px; color: #6f6653; line-height: 1.3; }
+  .bar .spacer { flex: 1; }
+  .bar button {
+    border: 1px solid rgba(120, 110, 90, 0.35);
+    background: rgba(255, 255, 255, 0.55);
+    color: #4a4436; border-radius: 10px;
+    min-height: 34px; padding: 0 12px; font: inherit; font-size: 14px; font-weight: 600;
+  }
+  .bar button:active { background: rgba(255, 255, 255, 0.9); }
+
+  /* ---------- paper ---------- */
+  .desk { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 12px 96px; display: flex; flex-direction: column; }
+  .page {
+    flex: 1 0 auto;
+    width: 100%;
+    position: relative;
+    max-width: 820px; margin: 0 auto;
+    background: var(--paper);
+    border-radius: 4px 10px 10px 4px;
+    box-shadow: 0 1px 2px rgba(60, 50, 30, 0.18), 0 12px 32px rgba(60, 50, 30, 0.16);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(var(--line) - 1px),
+      var(--rule) calc(var(--line) - 1px),
+      var(--rule) var(--line)
+    );
+    background-position: 0 6px;
+    padding: 6px 22px 40px 66px;
+  }
+  .page::before {
+    content: "";
+    position: absolute; top: 0; bottom: 0; left: 48px;
+    border-left: 1px solid var(--margin);
+    pointer-events: none;
+  }
+  .page::after {
+    content: "";
+    position: absolute; top: 0; bottom: 0; left: 52px;
+    border-left: 1px solid rgba(196, 92, 92, 0.18);
+    pointer-events: none;
+  }
+
+  .date-line {
+    text-align: right; font-size: 13px; color: var(--ink-faint);
+    line-height: var(--line); letter-spacing: .04em;
+  }
+
+  .entry { position: relative; }
+  .entry + .entry { margin-top: 8px; }
+  .num {
+    position: absolute; left: -54px; top: 0;
+    width: 34px; text-align: right;
+    font-size: 12px; color: var(--ink-faint); line-height: var(--line);
+  }
+  .row { display: flex; align-items: baseline; gap: 8px; min-height: var(--line); }
+  .word {
+    flex: 1; min-width: 0;
+    border: 0; outline: 0; background: transparent;
+    font: 600 22px/var(--line) Georgia, "Times New Roman", "Songti SC", serif;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+    padding: 0; margin: 0;
+    caret-color: var(--accent);
+  }
+  .word::placeholder { color: #b9b3a3; font-weight: 400; font-style: italic; }
+  .tags { font-size: 11px; color: var(--ink-faint); white-space: nowrap; letter-spacing: .04em; }
+  .acts { display: flex; gap: 2px; flex: none; align-self: center; }
+  .acts button {
+    border: 0; background: transparent; color: var(--ink-faint);
+    width: 34px; height: 34px; border-radius: 50%; font-size: 16px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .acts button:active { background: var(--accent-soft); color: var(--accent); }
+
+  .anno { position: relative; }
+  .line { line-height: var(--line); font-size: 16px; overflow-wrap: anywhere; }
+  .line.zh { color: #23304a; }
+  .line.zh .pos { color: #2b6b57; font-weight: 700; font-style: italic; margin-right: 4px; }
+  .line.usage { color: var(--ink-soft); font-size: 15px; }
+  .line.usage b { color: var(--ink); font-weight: 600; }
+  .line.def { color: var(--ink-faint); font-size: 14px; font-style: italic; }
+  .line.ex-en { color: #2b3a55; font-size: 15px; }
+  .line.ex-zh { color: var(--ink-soft); font-size: 14px; }
+  .line.ex-en::before, .line.ex-zh::before { content: "· "; color: var(--ink-faint); }
+  .line.pending { color: var(--ink-faint); font-style: italic; }
+  .line.missing { color: var(--warn); }
+
+  .note {
+    min-height: var(--line); line-height: var(--line);
+    font-size: 16px; color: #7a3e2a; outline: 0;
+    border-bottom: 1px dashed rgba(122, 62, 42, 0.22);
+  }
+  .note:empty::before { content: attr(data-placeholder); color: #c2b7a4; }
+  .note:focus { border-bottom-color: rgba(122, 62, 42, 0.5); }
+
+  .hint {
+    position: absolute; left: 0; top: 0;
+    font-size: 13px; color: var(--ink-faint); line-height: var(--line);
+    pointer-events: none;
+  }
+
+  /* ---------- bottom bar ---------- */
+  .dock {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 10px 16px calc(10px + var(--safe-bottom));
+    display: flex; gap: 10px; align-items: center;
+    background: linear-gradient(rgba(232, 226, 211, 0), rgba(226, 219, 202, 0.92) 40%);
+    pointer-events: none;
+  }
+  .dock button {
+    pointer-events: auto;
+    border: 0; border-radius: 14px; font: inherit; font-weight: 700;
+    min-height: 52px; padding: 0 22px; font-size: 17px;
+    box-shadow: 0 6px 18px rgba(50, 40, 20, 0.22);
+    background: var(--ink); color: #fdfaf1;
+  }
+  .dock button.ghost { background: rgba(255, 255, 255, 0.86); color: var(--ink); box-shadow: none; border: 1px solid rgba(120,110,90,.35); }
+
+  /* ---------- ink ---------- */
+  .ink-layer {
+    position: absolute; left: 0; top: 0;
+    pointer-events: none; z-index: 6;
+  }
+  .page.pen-mode { user-select: none; -webkit-user-select: none; }
+  .page.pen-mode input, .page.pen-mode .note, .page.pen-mode button { pointer-events: none; }
+  .penbar {
+    position: fixed; left: 10px; right: 10px;
+    bottom: calc(78px + var(--safe-bottom));
     display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px; border-radius: 16px;
+    background: rgba(251, 248, 239, 0.98);
+    border: 1px solid rgba(120, 110, 90, 0.28);
+    box-shadow: 0 10px 28px rgba(40, 30, 10, 0.22);
+    z-index: 30; overflow-x: auto; -webkit-overflow-scrolling: touch;
   }
-  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
-  .badge {
-    min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
-    background: var(--accent); color: #fff; font-size: 12px; font-weight: 700;
-    display: inline-flex; align-items: center; justify-content: center;
+  .penbar::-webkit-scrollbar { display: none; }
+  .penbar button {
+    flex: none; border: 1px solid rgba(120, 110, 90, 0.3);
+    background: #fff; color: #4a4436;
+    min-height: 38px; padding: 0 12px; border-radius: 11px;
+    font: inherit; font-size: 14px; font-weight: 600;
   }
-  main { flex: 1; padding: 16px 16px calc(32px + env(safe-area-inset-bottom)); max-width: 860px; width: 100%; margin: 0 auto; }
-  .search { position: relative; }
-  textarea#input {
-    width: 100%; min-height: 92px; max-height: 40vh; resize: none;
-    padding: 16px 56px 16px 16px;
-    font: inherit; font-size: 21px; line-height: 1.4;
-    color: var(--text); background: var(--card);
-    border: 1px solid var(--card-border); border-radius: var(--radius);
-    box-shadow: var(--shadow);
-    outline: none;
+  .penbar button[aria-pressed="true"] { background: var(--ink); color: #fdfaf1; border-color: transparent; }
+  .penbar .sep { flex: none; width: 1px; height: 24px; background: rgba(120, 110, 90, 0.22); margin: 0 2px; }
+  .swatch {
+    flex: none; width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 1px rgba(120, 110, 90, 0.35);
+    padding: 0;
   }
-  textarea#input::placeholder { color: var(--muted); font-size: 18px; }
-  textarea#input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-  .clear-btn {
-    position: absolute; top: 8px; right: 8px;
-    width: 44px; height: 44px; border-radius: 50%;
-    border: 0; background: transparent; color: var(--muted);
-    font-size: 20px; line-height: 1; cursor: pointer;
-  }
-  .status { margin: 12px 2px 0; font-size: 14px; color: var(--muted); min-height: 21px; }
-  .status.live { color: var(--accent-strong); }
-  .status.error { color: var(--danger); }
-  #results { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
 
-  .idle { padding: 22px 4px 8px; color: var(--muted); }
-  .idle-lead { margin: 0 0 14px; font-size: 17px; color: var(--text); }
-  .examples { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
-  .example {
-    border: 1px solid var(--card-border); background: var(--card); color: var(--accent-strong);
-    font: inherit; font-size: 16px; font-weight: 600;
-    padding: 11px 16px; min-height: 44px; border-radius: 999px; cursor: pointer;
-    box-shadow: var(--shadow);
+  /* ---------- dialogs ---------- */
+  dialog {
+    border: 0; border-radius: 18px; padding: 0;
+    width: min(560px, calc(100vw - 32px));
+    background: #fbf8ef; color: var(--ink);
+    box-shadow: 0 24px 64px rgba(30, 24, 12, 0.35);
   }
-  .idle-tip { margin: 0; font-size: 15px; line-height: 1.6; }
-  .note { margin: 0; font-size: 15px; color: var(--muted); }
+  dialog::backdrop { background: rgba(40, 34, 22, 0.45); backdrop-filter: blur(2px); }
+  .dlg { padding: 18px 18px calc(18px + var(--safe-bottom)); }
+  .dlg h2 { margin: 0 0 6px; font-size: 18px; }
+  .dlg p { margin: 0 0 12px; color: var(--ink-soft); font-size: 14px; line-height: 1.6; }
+  .dlg label { display: block; font-size: 13px; color: var(--ink-soft); margin: 12px 0 4px; }
+  .dlg input[type="text"], .dlg input[type="password"] {
+    width: 100%; min-height: 44px; padding: 8px 12px;
+    border: 1px solid rgba(120, 110, 90, 0.35); border-radius: 10px;
+    background: #fff; font: inherit; font-size: 16px; color: var(--ink);
+  }
+  .dlg .rowbtns { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .dlg .rowbtns button {
+    flex: 1; min-height: 46px; border-radius: 12px; font: inherit; font-weight: 600;
+    border: 1px solid rgba(120, 110, 90, 0.35); background: #fff; color: var(--ink);
+  }
+  .dlg .rowbtns button.primary { background: var(--ink); color: #fdfaf1; border-color: transparent; }
+  .dlg .rowbtns button.danger { color: var(--warn); }
+  .dlg .switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 15px; }
 
-  .card {
-    background: var(--card); border: 1px solid var(--card-border);
-    border-radius: var(--radius); box-shadow: var(--shadow);
-    padding: 18px; animation: fade 0.18s ease-out;
-  }
-  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .word-row { display: flex; align-items: center; gap: 10px; }
-  .word-row h2 { margin: 0; font-size: 30px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; word-break: break-word; min-width: 0; }
-  .star {
-    margin-left: auto; flex: none;
-    border: 1px solid var(--card-border); background: var(--chip); color: var(--text);
-    border-radius: 999px; padding: 9px 15px; min-height: 44px;
-    font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
-  }
-  .star[data-saved="true"] { background: var(--accent-soft); border-color: transparent; color: var(--accent-strong); }
-  .star:disabled { opacity: 0.6; cursor: progress; }
-  .phon { margin-top: 6px; color: var(--muted); font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
-  .phon span { display: inline-flex; align-items: center; gap: 6px; }
-  .speak {
-    border: 0; background: var(--chip); color: var(--accent-strong);
-    width: 44px; height: 44px; margin: -8px 0 -8px -4px; border-radius: 50%; cursor: pointer; font-size: 15px;
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .speak:active { transform: scale(0.94); }
-  ul.trs { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-  ul.trs li { font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
-  .pos {
-    display: inline-block; min-width: 34px; margin-right: 6px;
-    color: var(--pos); font-weight: 700; font-size: 15px; font-style: italic;
-  }
-  .sect { margin-top: 16px; border-top: 1px dashed var(--card-border); padding-top: 12px; }
-  .sect h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-  .ex { margin: 0 0 10px; overflow-wrap: anywhere; }
-  .ex .en { font-size: 16px; }
-  .ex .zh { font-size: 15px; color: var(--muted); margin-top: 2px; }
-  .phrs { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 0; padding: 0; list-style: none; }
-  .phrs li { display: flex; gap: 10px; font-size: 16px; }
-  .phrs b { font-weight: 600; flex: none; }
-  .phrs span { color: var(--muted); overflow-wrap: anywhere; }
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tag { background: var(--chip); border-radius: 8px; padding: 4px 9px; font-size: 14px; color: var(--muted); }
-
-  .row-wrap { display: flex; flex-direction: column; gap: 8px; }
-  .row {
-    display: flex; align-items: stretch; gap: 8px;
-    background: var(--card); border: 1px solid var(--card-border); border-radius: 14px;
-    box-shadow: var(--shadow); padding: 8px 10px;
-  }
-  .row-main {
-    flex: 1; min-width: 0; text-align: left; cursor: pointer;
-    background: transparent; border: 0; color: var(--text); font: inherit;
-    padding: 6px 4px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline;
-  }
-  .row-main .w { font-size: 20px; font-weight: 700; overflow-wrap: anywhere; }
-  .row-main .ph { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
-  .row-main .tr { grid-column: 1 / -1; font-size: 16px; overflow-wrap: anywhere; }
-  .row-main .tr.muted { color: var(--muted); }
-  .row-star {
-    flex: none; width: 44px; min-height: 44px; align-self: center;
-    border: 0; border-radius: 12px; background: var(--chip); color: var(--text);
-    font-size: 18px; line-height: 1; cursor: pointer;
-  }
-  .row-star[data-saved="true"] { background: var(--accent-soft); color: var(--accent-strong); }
-  .row-star:disabled { opacity: 0.6; cursor: progress; }
-
-  .toolbar { display: flex; gap: 10px; margin-bottom: 12px; }
-  .toolbar button {
-    flex: 1; padding: 11px 12px; min-height: 44px; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600;
-    background: var(--card); color: var(--text); border: 1px solid var(--card-border); cursor: pointer;
-  }
-  .toolbar button.danger { color: var(--danger); }
-  .toolbar button:disabled { opacity: 0.45; cursor: default; }
-  .book-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-  .book-item {
-    display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center;
-    background: var(--card); border: 1px solid var(--card-border); border-radius: 14px;
-    padding: 10px 10px 10px 14px; box-shadow: var(--shadow);
-  }
-  .book-item button.link { all: unset; cursor: pointer; display: block; min-height: 44px; padding: 6px 0; -webkit-user-select: none; user-select: none; }
-  .book-item .w { display: block; font-size: 19px; font-weight: 700; overflow-wrap: anywhere; }
-  .book-item .b { display: block; font-size: 15px; color: var(--muted); overflow-wrap: anywhere; }
-  .book-item .x {
-    border: 0; background: transparent; color: var(--muted);
-    width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; grid-row: 1 / span 2;
-  }
-  .empty { text-align: center; color: var(--muted); padding: 36px 12px; font-size: 16px; line-height: 1.7; }
-  .empty b { color: var(--text); }
-  .footer-note { margin-top: 22px; text-align: center; font-size: 12px; color: var(--muted); }
-
+  .empty-state { padding: 28px 6px; color: var(--ink-soft); font-size: 16px; }
+  .empty-state b { color: var(--ink); }
   .toast {
-    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
-    transform: translate(-50%, 12px);
-    background: rgba(22, 24, 28, 0.94); color: #fff;
-    padding: 11px 18px; border-radius: 999px; font-size: 15px; font-weight: 600;
-    opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s;
-    max-width: calc(100vw - 48px); text-align: center; z-index: 40;
+    position: fixed; left: 50%; bottom: calc(84px + var(--safe-bottom));
+    transform: translate(-50%, 8px); opacity: 0;
+    background: rgba(27, 36, 54, 0.95); color: #fff;
+    padding: 10px 18px; border-radius: 999px; font-size: 15px; font-weight: 600;
+    transition: .18s; pointer-events: none; z-index: 50; max-width: 86vw; text-align: center;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  .toast.error { background: rgba(180, 40, 40, 0.96); }
+  .toast.error { background: rgba(160, 52, 34, 0.96); }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<header>
-  <div class="brand">生词助手<small id="server-state">连接中…</small></div>
-  <div class="tabs" role="tablist">
-    <button type="button" role="tab" aria-selected="true" data-tab="lookup">查词</button>
-    <button type="button" role="tab" aria-selected="false" data-tab="book">生词本 <span class="badge" id="count">0</span></button>
+
+<div class="bar">
+  <div>
+    <h1>生词本</h1>
+    <div class="meta" id="meta">载入中…</div>
   </div>
-</header>
+  <div class="spacer"></div>
+  <button type="button" id="btn-backup">备份</button>
+  <button type="button" id="btn-settings">设置</button>
+</div>
 
-<main>
-  <section id="view-lookup">
-    <div class="search">
-      <textarea id="input" rows="2" autocapitalize="off" autocorrect="off" spellcheck="false"
-        placeholder="写下英文单词，或粘贴整段英文…" enterkeyhint="search"></textarea>
-      <button class="clear-btn" id="clear-input" aria-label="清空">×</button>
+<div class="desk" id="desk">
+  <div class="page" id="page">
+    <div class="empty-state" id="empty-state">
+      <b>用 Apple Pencil 在横线上写英文单词。</b><br>
+      系统会把笔迹转成文字，然后自动附上中文释义、用法和例句。
     </div>
-    <div class="status" id="status" role="status" aria-live="polite"></div>
-    <div id="results"></div>
-  </section>
+    <div class="date-line" id="date-line"></div>
+    <div id="entries"></div>
+  </div>
+</div>
 
-  <section id="view-book" hidden>
-    <div class="toolbar">
-      <button type="button" id="export-csv">导出 CSV</button>
-      <button type="button" class="danger" id="clear-book">清空生词本</button>
+<div class="dock">
+  <button type="button" id="btn-add">＋ 新单词</button>
+  <button type="button" class="ghost" id="btn-lookup">速查</button>
+  <button type="button" class="ghost" id="btn-pen">✎ 批注</button>
+</div>
+
+<div class="penbar" id="penbar" hidden>
+  <button type="button" class="tool" data-tool="pen" aria-pressed="true">钢笔</button>
+  <button type="button" class="tool" data-tool="ball" aria-pressed="false">签字笔</button>
+  <button type="button" class="tool" data-tool="marker" aria-pressed="false">荧光笔</button>
+  <button type="button" class="tool" data-tool="eraser" aria-pressed="false">橡皮</button>
+  <span class="sep"></span>
+  <button type="button" class="swatch" data-color="#1b2436" style="background:#1b2436" aria-pressed="true" aria-label="黑"></button>
+  <button type="button" class="swatch" data-color="#1f4fd8" style="background:#1f4fd8" aria-pressed="false" aria-label="蓝"></button>
+  <button type="button" class="swatch" data-color="#c0392b" style="background:#c0392b" aria-pressed="false" aria-label="红"></button>
+  <button type="button" class="swatch" data-color="#1e7f4f" style="background:#1e7f4f" aria-pressed="false" aria-label="绿"></button>
+  <button type="button" class="swatch" data-color="#f2c200" style="background:#f2c200" aria-pressed="false" aria-label="黄"></button>
+  <span class="sep"></span>
+  <button type="button" id="pen-undo">撤销</button>
+  <button type="button" id="pen-clear">清空</button>
+  <button type="button" id="pen-done">完成</button>
+</div>
+
+<dialog id="dlg-settings">
+  <div class="dlg">
+    <h2>设置</h2>
+    <p>词库在本机离线可用；例句来自 Tatoeba 公共语料，单词不在语料里时可以选装 AI 生成。</p>
+    <label for="opt-ai-key">DeepSeek API Key（可选，用于生成例句）</label>
+    <input type="password" id="opt-ai-key" placeholder="sk-..." autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="switch">
+      <span>自动查 Tatoeba 例句</span>
+      <input type="checkbox" id="opt-examples" checked>
     </div>
-    <ul class="book-list" id="book-list"></ul>
-    <div class="footer-note">生词保存在这台设备的浏览器里；导出的 CSV 可导入 Anki、欧路词典或 Excel。<br>词库：CET4/6、考研、雅思、托福、GRE、专八、COCA 20000（共 21760 词），来自 qwerty-learner 开源词表。</div>
-  </section>
-</main>
+    <p style="margin-top:14px">数据保存在这台设备里。定期用「备份 → 导出」存一份文件，就不会丢。</p>
+    <div class="rowbtns">
+      <button type="button" data-close>取消</button>
+      <button type="button" class="primary" id="btn-save-settings">保存</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlg-backup">
+  <div class="dlg">
+    <h2>备份与恢复</h2>
+    <p>笔记存在这台 iPad 的浏览器里。换设备、清理网站数据前，请先导出一份 JSON 存到「文件」App 或 iCloud。</p>
+    <div class="rowbtns">
+      <button type="button" class="primary" id="btn-export">导出 JSON</button>
+      <button type="button" id="btn-export-text">导出纯文本</button>
+    </div>
+    <div class="rowbtns">
+      <button type="button" id="btn-import">导入 JSON</button>
+      <button type="button" class="danger" id="btn-clear">清空全部</button>
+    </div>
+    <div class="rowbtns">
+      <button type="button" data-close>关闭</button>
+    </div>
+    <input type="file" id="file-import" accept="application/json,.json" hidden>
+  </div>
+</dialog>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -257,89 +332,34 @@
 (function () {
   'use strict';
 
-  var input = document.getElementById('input');
-  var statusEl = document.getElementById('status');
-  var results = document.getElementById('results');
-  var countEl = document.getElementById('count');
-  var serverState = document.getElementById('server-state');
-  var bookList = document.getElementById('book-list');
-  var viewLookup = document.getElementById('view-lookup');
-  var viewBook = document.getElementById('view-book');
-  var toastEl = document.getElementById('toast');
-  var exportBtn = document.getElementById('export-csv');
-  var clearBtn = document.getElementById('clear-book');
+  var DB_NAME = 'vocab-notebook';
+  var DB_VERSION = 1;
+  var STORE = 'state';
+  var MIRROR_KEY = 'vocab-notebook:mirror:v1';
+  var SETTINGS_KEY = 'vocab-notebook:settings:v1';
 
-  var STORE_KEY = 'vocab-lens:wordbook:v1';
+  var state = {
+    entries: [],
+    settings: { examples: true, apiKey: '' },
+    savedAt: 0,
+    dirty: false,
+    loaded: false,
+  };
 
-  var wordbook = [];
-  var savedWords = new Set();
-  var seq = 0;
-  var timer = null;
-  var toastTimer = null;
-  var detailCache = Object.create(null);
+  var els = {
+    meta: document.getElementById('meta'),
+    page: document.getElementById('page'),
+    entries: document.getElementById('entries'),
+    empty: document.getElementById('empty-state'),
+    desk: document.getElementById('desk'),
+    dlgSettings: document.getElementById('dlg-settings'),
+    dlgBackup: document.getElementById('dlg-backup'),
+    toast: document.getElementById('toast'),
+  };
 
-  var WORD_RE = /[A-Za-z][A-Za-z'\u2019\u02BC\-\u2010-\u2015]*/g;
+  /* ------------------------------------------------------------ utilities */
 
-  /* ---------------------------------------------------------------- utils */
-
-  function normalizeToken(text) {
-    return String(text)
-      .replace(/[\u2018\u2019\u02BC]/g, "'")
-      .replace(/[\u2010-\u2015]/g, '-');
-  }
-
-  function stripTags(value) {
-    return String(value || '')
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .trim();
-  }
-
-  function splitTranslation(text) {
-    var match = /^([a-z]+\.(?:\s*&\s*[a-z]+\.)*)\s*/i.exec(text);
-    if (!match) return { pos: '', text: text.trim() };
-    return { pos: match[1], text: text.slice(match[0].length).trim() };
-  }
-
-  function pickList(value) {
-    return Array.isArray(value) ? value : value ? [value] : [];
-  }
-
-  function extractWords(text) {
-    var norm = normalizeToken(text);
-    var seen = Object.create(null);
-    var out = [];
-    var total = 0;
-    var m;
-    WORD_RE.lastIndex = 0;
-    while ((m = WORD_RE.exec(norm)) !== null) {
-      var w = m[0].replace(/^[-']+|[-']+$/g, '').toLowerCase();
-      if (!w) continue;
-      total += 1;
-      if (seen[w]) continue;
-      seen[w] = true;
-      out.push(w);
-    }
-    return { words: out.slice(0, 40), unique: out.length, occurrences: total };
-  }
-
-  function setStatus(text, cls) {
-    statusEl.textContent = text || '';
-    statusEl.className = 'status' + (cls ? ' ' + cls : '');
-  }
-
-  function toast(message, isError) {
-    toastEl.textContent = message;
-    toastEl.className = 'toast show' + (isError ? ' error' : '');
-    if (toastTimer) clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { toastEl.className = 'toast'; }, 2400);
-  }
-
-  function el(tag, props, children) {
+  function h(tag, props, children) {
     var node = document.createElement(tag);
     if (props) {
       Object.keys(props).forEach(function (key) {
@@ -359,560 +379,947 @@
     return node;
   }
 
+  var toastTimer = null;
+  function toast(message, isError) {
+    els.toast.textContent = message;
+    els.toast.className = 'toast show' + (isError ? ' error' : '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { els.toast.className = 'toast'; }, 2400);
+  }
+
+  function normalizeWord(raw) {
+    return String(raw || '')
+      .replace(/[\u2018\u2019\u02BC]/g, "'")
+      .replace(/[\u2010-\u2015]/g, '-')
+      .trim()
+      .replace(/^[^A-Za-z]+|[^A-Za-z]+$/g, '')
+      .toLowerCase();
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  /* -------------------------------------------------------------- storage */
+
+  var dbPromise = null;
+
+  function openDb() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve) {
+      if (!window.indexedDB) { resolve(null); return; }
+      var request = indexedDB.open(DB_NAME, DB_VERSION);
+      request.onupgradeneeded = function () {
+        var db = request.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      };
+      request.onsuccess = function () { resolve(request.result); };
+      request.onerror = function () { resolve(null); };
+    });
+    return dbPromise;
+  }
+
+  async function dbRead() {
+    var db = await openDb();
+    if (!db) return null;
+    return new Promise(function (resolve) {
+      var tx = db.transaction(STORE, 'readonly');
+      var req = tx.objectStore(STORE).get('doc');
+      req.onsuccess = function () { resolve(req.result || null); };
+      req.onerror = function () { resolve(null); };
+    });
+  }
+
+  async function dbWrite(doc) {
+    var db = await openDb();
+    if (!db) return false;
+    return new Promise(function (resolve) {
+      var tx = db.transaction(STORE, 'readwrite');
+      tx.objectStore(STORE).put(doc, 'doc');
+      tx.oncomplete = function () { resolve(true); };
+      tx.onerror = function () { resolve(false); };
+    });
+  }
+
+  var saveTimer = null;
+
+  function scheduleSave() {
+    state.dirty = true;
+    updateMeta();
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(persist, 350);
+  }
+
+  async function persist() {
+    if (!state.loaded) return;
+    var doc = {
+      version: 1,
+      entries: state.entries.map(serializeEntry),
+      savedAt: Date.now(),
+    };
+    var ok = await dbWrite(doc);
+    try {
+      localStorage.setItem(MIRROR_KEY, JSON.stringify(doc));
+    } catch (error) { /* quota */ }
+    state.dirty = false;
+    if (ok) state.savedAt = doc.savedAt;
+    updateMeta();
+    if (!ok) toast('存储写入失败，请立即导出备份', true);
+  }
+
+  function serializeEntry(entry) {
+    return {
+      id: entry.id,
+      word: entry.word,
+      note: entry.note,
+      status: entry.status,
+      dict: entry.dict || null,
+      examples: entry.examples || [],
+      ink: entry.ink || [],
+      usage: entry.usage || '',
+      ai: entry.ai || null,
+      createdAt: entry.createdAt,
+      updatedAt: Date.now(),
+    };
+  }
+
+  function restoreEntry(raw) {
+    return {
+      id: raw.id || uid(),
+      word: raw.word || '',
+      note: raw.note || '',
+      status: raw.status || 'empty',
+      dict: raw.dict || null,
+      examples: Array.isArray(raw.examples) ? raw.examples : [],
+      ink: Array.isArray(raw.ink) ? raw.ink : [],
+      usage: raw.usage || '',
+      ai: raw.ai || null,
+      createdAt: raw.createdAt || Date.now(),
+      updatedAt: raw.updatedAt || Date.now(),
+    };
+  }
+
+  function updateMeta() {
+    var count = state.entries.filter(function (e) { return e.word; }).length;
+    var saved = state.dirty ? '保存中…' : (state.savedAt ? '已保存 ' + new Date(state.savedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) : '未保存');
+    els.meta.textContent = count + ' 个词 · ' + saved;
+  }
+
   /* ------------------------------------------------------------ dictionary */
 
   var shardCache = Object.create(null);
 
   function loadShard(letter) {
     if (shardCache[letter]) return shardCache[letter];
-    var request = fetch('dict/' + letter + '.json').then(function (res) {
+    var promise = fetch('dict/' + letter + '.json').then(function (res) {
       if (!res.ok) throw new Error('shard ' + res.status);
       return res.json();
     }).catch(function (error) {
       delete shardCache[letter];
       throw error;
     });
-    shardCache[letter] = request;
-    return request;
+    shardCache[letter] = promise;
+    return promise;
   }
 
-  function entryFromRow(word, row) {
-    var translations = String(row[2] || '').split('；').filter(Boolean).map(function (text) {
-      var match = /^([a-z]+\.(?:\s*&\s*[a-z]+\.)*)\s*/i.exec(text);
-      if (!match) return { pos: '', text: text };
-      return { pos: match[1], text: text.slice(match[0].length) };
-    });
-    return {
-      word: word,
-      phonetic: { us: row[0] || '', uk: row[1] || '' },
-      audio: {
-        us: 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=2',
-        uk: 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=1',
-      },
-      translations: translations,
-      examples: [],
-      phrases: [],
-      forms: [],
-      webTrans: [],
-      definitions: [],
-    };
-  }
-
-  function lookupOne(word) {
-    var cached = detailCache[word];
-    if (cached) return Promise.resolve(cached);
-    var key = String(word || '').toLowerCase();
-    if (!key) return Promise.resolve({ ok: false, error: 'empty' });
-    var letter = key[0];
-    if (!/[a-z]/.test(letter)) return Promise.resolve({ ok: false, error: 'not-found' });
-    return loadShard(letter).then(function (shard) {
-      var row = shard && shard[key];
-      if (!row) return { ok: false, error: 'not-found' };
-      var body = { ok: true, entry: entryFromRow(key, row) };
-      detailCache[key] = body;
-      return body;
-    }).catch(function () {
-      return { ok: false, error: 'network' };
-    });
-  }
-
-  /* --------------------------------------------------------------- storage */
-
-  function loadBook() {
+  async function lookupWord(word) {
+    var key = normalizeWord(word);
+    if (!key) return null;
     try {
-      var raw = window.localStorage.getItem(STORE_KEY);
-      var parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed.filter(function (item) { return item && item.word; }) : [];
-    } catch (e) {
+      var shard = await loadShard(key[0]);
+      var row = shard && shard[key];
+      if (!row) return null;
+      return {
+        word: key,
+        us: row[0] || '',
+        uk: row[1] || '',
+        cn: row[2] || '',
+        exchange: row[3] || '',
+        en: row[4] || '',
+        tags: row[5] || '',
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /* -------------------------------------------------------------- tatoeba */
+
+  async function fetchExamples(word) {
+    var url = 'https://api.tatoeba.org/unstable/sentences?lang=eng&q=' + encodeURIComponent(word) +
+      '&sort=relevance&trans%3Alang=cmn&limit=6';
+    try {
+      var res = await fetch(url);
+      if (!res.ok) return [];
+      var json = await res.json();
+      var data = (json && json.data) || [];
+      var out = [];
+      var stem = word.replace(/[^a-z]/g, '');
+      for (var i = 0; i < data.length && out.length < 2; i += 1) {
+        var sentence = data[i];
+        var text = String(sentence.text || '').trim();
+        if (!text) continue;
+        if (stem && text.toLowerCase().indexOf(stem.slice(0, Math.max(4, stem.length - 2))) < 0) continue;
+        if (text.length > 160) continue;
+        var zh = '';
+        var translations = sentence.translations || [];
+        for (var j = 0; j < translations.length; j += 1) {
+          if (translations[j].lang !== 'cmn') continue;
+          if (translations[j].script === 'Hans') { zh = translations[j].text; break; }
+          if (!zh) zh = translations[j].text;
+        }
+        if (!zh) continue;
+        out.push({ en: text, zh: zh, src: 'Tatoeba' });
+      }
+      return out;
+    } catch (error) {
       return [];
     }
   }
 
-  function persistBook(items) {
-    try {
-      window.localStorage.setItem(STORE_KEY, JSON.stringify(items));
-    } catch (e) {
-      toast('浏览器存储不可用，收藏没有保存', true);
-    }
-    return items;
-  }
+  /* ------------------------------------------------------------------- ai */
 
-  function addWord(word, entry) {
-    var existing = null;
-    for (var i = 0; i < wordbook.length; i += 1) {
-      if (wordbook[i].word === word) { existing = wordbook[i]; break; }
-    }
-    if (existing) {
-      existing.count = (existing.count || 1) + 1;
-      return persistBook(wordbook);
-    }
-    wordbook.unshift({
-      word: word,
-      phonetic: (entry && entry.phonetic && (entry.phonetic.us || entry.phonetic.uk)) || '',
-      brief: briefOf(entry),
-      addedAt: Date.now(),
-      count: 1,
+  async function generateAI(word) {
+    var key = state.settings.apiKey;
+    if (!key) throw new Error('no-key');
+    var prompt = '你是英语词典编辑。为单词 "' + word + '" 给出：1) 中文用法要点，不超过 45 字，讲清搭配或使用场景；2) 两个英文例句，每句不超过 16 词，并给中文翻译。只输出 JSON：{"usage":"...","examples":[{"en":"...","zh":"..."}]}';
+    var res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+        response_format: { type: 'json_object' },
+      }),
     });
-    return persistBook(wordbook);
+    if (!res.ok) throw new Error('ai ' + res.status);
+    var json = await res.json();
+    var content = json.choices && json.choices[0] && json.choices[0].message && json.choices[0].message.content;
+    var data = JSON.parse(content);
+    return {
+      usage: String(data.usage || '').slice(0, 120),
+      examples: (data.examples || []).slice(0, 2).map(function (item) {
+        return { en: String(item.en || ''), zh: String(item.zh || ''), src: 'AI' };
+      }),
+    };
   }
 
-  function removeWord(word) {
-    wordbook = wordbook.filter(function (item) { return item.word !== word; });
-    return persistBook(wordbook);
-  }
-
-  function briefOf(entry) {
-    if (!entry || !entry.translations || !entry.translations.length) return '';
-    var first = entry.translations[0];
-    return (first.pos ? first.pos + ' ' : '') + first.text;
-  }
-
-  /* ------------------------------------------------------------------- ui */
-
-  function refreshStars() {
-    Array.prototype.forEach.call(document.querySelectorAll('[data-star-word]'), function (btn) {
-      var saved = savedWords.has(btn.dataset.starWord);
-      btn.dataset.saved = String(saved);
-      btn.setAttribute('aria-pressed', String(saved));
-      btn.textContent = btn.classList.contains('row-star') ? (saved ? '★' : '☆') : (saved ? '★ 已收藏' : '☆ 收藏');
-    });
-  }
-
-  function applyWordbook(items) {
-    wordbook = items || [];
-    savedWords = new Set(wordbook.map(function (item) { return item.word; }));
-    countEl.textContent = String(wordbook.length);
-    refreshStars();
-    renderBook();
-  }
-
-  function makeStar(word, entry, compact) {
-    var saved = savedWords.has(word);
-    var btn = el('button', {
-      className: compact ? 'row-star' : 'star',
-      type: 'button',
-      'aria-pressed': String(saved),
-      dataset: { saved: String(saved), starWord: word },
-    }, [compact ? (saved ? '★' : '☆') : (saved ? '★ 已收藏' : '☆ 收藏')]);
-
-    btn.addEventListener('click', function (event) {
-      event.stopPropagation();
-      var wasSaved = savedWords.has(word);
-      applyWordbook(wasSaved ? removeWord(word) : addWord(word, entry));
-      toast(wasSaved ? '已从生词本移除' : '已加入生词本');
-    });
-    return btn;
-  }
-
-  function playAudio(url) {
-    if (!url) return;
-    try {
-      var audio = new Audio(url);
-      audio.play().catch(function () {});
-    } catch (e) { /* ignore */ }
-  }
-
-  function speakButton(url) {
-    return el('button', {
-      className: 'speak', type: 'button', 'aria-label': '发音',
-      onclick: function (event) { event.stopPropagation(); playAudio(url); },
-    }, ['🔊']);
-  }
-
-  function phonLine(entry) {
-    var us = entry.phonetic && entry.phonetic.us;
-    var uk = entry.phonetic && entry.phonetic.uk;
-    var wrap = el('div', { className: 'phon' });
-    if (uk) wrap.appendChild(el('span', {}, ['英 /' + uk + '/', speakButton(entry.audio.uk)]));
-    if (us && us !== uk) wrap.appendChild(el('span', {}, ['美 /' + us + '/', speakButton(entry.audio.us)]));
-    if (!uk && !us && entry.audio && entry.audio.us) wrap.appendChild(el('span', {}, ['发音', speakButton(entry.audio.us)]));
-    return wrap.children.length ? wrap : null;
-  }
+  /* ------------------------------------------------------------- rendering */
 
   function renderEntry(entry) {
-    var card = el('article', { className: 'card' });
-    card.appendChild(el('div', { className: 'word-row' }, [
-      el('h2', { text: entry.word }),
-      makeStar(entry.word, entry, false),
-    ]));
-
-    var phon = phonLine(entry);
-    if (phon) card.appendChild(phon);
-
-    if (entry.translations && entry.translations.length) {
-      var list = el('ul', { className: 'trs' });
-      entry.translations.forEach(function (tr) {
-        list.appendChild(el('li', {}, [
-          tr.pos ? el('span', { className: 'pos', text: tr.pos }) : null,
-          tr.text,
-        ]));
-      });
-      card.appendChild(list);
-    } else if (entry.webTrans && entry.webTrans.length) {
-      card.appendChild(el('ul', { className: 'trs' }, [
-        el('li', {}, [el('span', { className: 'pos', text: '网络' }), entry.webTrans.slice(0, 4).join('；')]),
-      ]));
-    }
-
-    if (entry.examples && entry.examples.length) {
-      var sect = el('div', { className: 'sect' });
-      sect.appendChild(el('h3', { text: '例句' }));
-      entry.examples.forEach(function (ex) {
-        sect.appendChild(el('div', { className: 'ex' }, [
-          el('div', { className: 'en', text: ex.en }),
-          ex.zh ? el('div', { className: 'zh', text: ex.zh }) : null,
-        ]));
-      });
-      card.appendChild(sect);
-    }
-
-    if (entry.phrases && entry.phrases.length) {
-      var ph = el('div', { className: 'sect' });
-      ph.appendChild(el('h3', { text: '短语' }));
-      var ul = el('ul', { className: 'phrs' });
-      entry.phrases.forEach(function (item) {
-        ul.appendChild(el('li', {}, [el('b', { text: item.en }), el('span', { text: item.zh })]));
-      });
-      ph.appendChild(ul);
-      card.appendChild(ph);
-    }
-
-    if (entry.webTrans && entry.webTrans.length && entry.translations && entry.translations.length) {
-      var web = el('div', { className: 'sect' });
-      web.appendChild(el('h3', { text: '网络释义' }));
-      var webTags = el('div', { className: 'tags' });
-      entry.webTrans.slice(0, 6).forEach(function (item) { webTags.appendChild(el('span', { className: 'tag', text: item })); });
-      web.appendChild(webTags);
-      card.appendChild(web);
-    }
-
-    return card;
-  }
-
-  function errorCard(word, code) {
-    var messages = {
-      'not-found': '本地词库里没有「' + word + '」，确认一下拼写？',
-      network: '词库文件没加载出来，检查网络后点这里重试。',
-      timeout: '词典响应太慢，稍等一下再试。',
-      empty: '输入为空。',
-    };
-    var card = el('div', { className: 'card empty' });
-    card.appendChild(el('div', { text: messages[code] || '查询失败：' + code }));
-    if (code !== 'empty') {
-      card.appendChild(el('button', {
-        className: 'star', type: 'button', text: '重试', style: 'margin:12px auto 0',
-        onclick: function () { runLookup(extractWords(word), word); },
-      }));
-    }
-    return card;
-  }
-
-  function renderIdle() {
-    results.innerHTML = '';
-    var box = el('div', { className: 'idle' });
-    box.appendChild(el('p', { className: 'idle-lead', text: '写下英文单词就出中文；粘贴整段英文会逐个标注。' }));
-    var chips = el('div', { className: 'examples' });
-    ['ubiquitous', 'ephemeral', 'resilient'].forEach(function (word) {
-      chips.appendChild(el('button', {
-        className: 'example', type: 'button', text: word,
-        onclick: function () { input.value = word; scheduleLookup(true); },
-      }));
+    var node = h('div', { className: 'entry', dataset: { id: entry.id } });
+    var num = h('span', { className: 'num' });
+    var input = h('input', {
+      className: 'word',
+      type: 'text',
+      value: entry.word,
+      placeholder: '写一个单词…',
+      autocapitalize: 'off',
+      autocorrect: 'off',
+      spellcheck: 'false',
+      enterkeyhint: 'done',
     });
-    box.appendChild(chips);
-    box.appendChild(el('p', { className: 'idle-tip', text: '查完点 ☆ 存进生词本；右上角生词本里可以导出 CSV。' }));
-    results.appendChild(box);
-  }
-
-  function showEntry(entry, mySeq) {
-    if (mySeq !== seq) return;
-    results.innerHTML = '';
-    results.appendChild(renderEntry(entry));
-    setStatus('');
-  }
-
-  function showFailure(word, error, mySeq) {
-    if (mySeq !== seq) return;
-    results.innerHTML = '';
-    results.appendChild(errorCard(word, error));
-    setStatus('', error === 'network' || error === 'timeout' ? 'error' : '');
-  }
-
-  function runSingle(word, mySeq) {
-    setStatus('正在查「' + word + '」…', 'live');
-    lookupOne(word).then(function (body) {
-      if (mySeq !== seq) return;
-      if (body.ok && body.entry) showEntry(body.entry, mySeq);
-      else showFailure(word, body.error || 'not-found', mySeq);
+    var tags = h('span', { className: 'tags', text: entry.dict && entry.dict.tags ? entry.dict.tags : '' });
+    var acts = h('div', { className: 'acts' }, [
+      h('button', { type: 'button', title: '重新查询', text: '↻', onclick: function () { annotate(entry, true); } }),
+      h('button', { type: 'button', title: '删除', text: '×', onclick: function () { removeEntry(entry); } }),
+    ]);
+    var anno = h('div', { className: 'anno' });
+    var note = h('div', {
+      className: 'note',
+      contenteditable: 'true',
+      'data-placeholder': '批注：记搭配、易错点、自己造的句子…',
+      spellcheck: 'false',
     });
-  }
+    if (entry.note) note.textContent = entry.note;
 
-  function runPhrase(phrase, info, mySeq) {
-    setStatus('正在查「' + phrase + '」…', 'live');
-    lookupOne(phrase).then(function (body) {
-      if (mySeq !== seq) return;
-      if (body.ok && body.entry) showEntry(body.entry, mySeq);
-      else runBatch(info, mySeq, '词组没查到，按单词分别释义：');
+    var noteTimer = null;
+    note.addEventListener('input', function () {
+      if (noteTimer) clearTimeout(noteTimer);
+      noteTimer = setTimeout(function () {
+        entry.note = note.textContent || '';
+        entry.updatedAt = Date.now();
+        scheduleSave();
+      }, 400);
     });
-  }
-
-  function runBatch(info, mySeq, note) {
-    var words = info.words;
-    var stats = { done: 0, ok: 0, missing: 0 };
-
-    if (note) results.appendChild(el('p', { className: 'note', text: note }));
-    setStatus('正在查 ' + words.length + ' 个词…', 'live');
-
-    var slots = words.map(function (word) {
-      var phon = el('span', { className: 'ph' });
-      var holder = el('span', { className: 'tr muted', text: '查询中…' });
-      var main = el('button', { className: 'row-main', type: 'button', 'aria-expanded': 'false' }, [
-        el('span', { className: 'w', text: word }),
-        phon,
-        holder,
-      ]);
-      var rowEl = el('div', { className: 'row' }, [main]);
-      var wrap = el('div', { className: 'row-wrap' }, [rowEl]);
-      results.appendChild(wrap);
-      return { word: word, wrap: wrap, row: rowEl, main: main, phon: phon, holder: holder };
+    note.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') { event.preventDefault(); note.blur(); }
     });
 
-    function fill(slot, body) {
-      if (!body.ok || !body.entry) {
-        stats.missing += 1;
-        slot.holder.textContent = body.error === 'not-found' ? '未收录' : '查询失败';
-        slot.holder.className = 'tr muted';
-        return;
+    var wordTimer = null;
+    input.addEventListener('input', function () {
+      if (wordTimer) clearTimeout(wordTimer);
+      var value = input.value;
+      wordTimer = setTimeout(function () {
+        var clean = normalizeWord(value);
+        if (clean === entry.word) return;
+        entry.word = clean;
+        entry.status = clean ? 'loading' : 'empty';
+        entry.dict = null;
+        entry.examples = [];
+        entry.ai = null;
+        renderAnno(entry);
+        scheduleSave();
+        if (clean) annotate(entry);
+      }, 900);
+    });
+    input.addEventListener('blur', function () {
+      if (wordTimer) clearTimeout(wordTimer);
+      var clean = normalizeWord(input.value);
+      if (clean && clean !== entry.word) {
+        input.value = clean;
+        entry.word = clean;
+        annotate(entry);
       }
-      var entry = body.entry;
-      var brief = briefOf(entry);
-      stats.ok += 1;
-      slot.holder.textContent = brief || '（无中文释义）';
-      slot.holder.className = 'tr' + (brief ? '' : ' muted');
-      slot.phon.textContent = entry.phonetic && entry.phonetic.us ? '/' + entry.phonetic.us + '/' : '';
-      slot.row.appendChild(makeStar(entry.word, entry, true));
-      var cardHost = el('div', { className: 'row-card', hidden: true });
-      slot.wrap.appendChild(cardHost);
-      slot.main.addEventListener('click', function () {
-        if (cardHost.hidden) {
-          if (!cardHost.dataset.built) {
-            cardHost.appendChild(renderEntry(entry));
-            cardHost.dataset.built = '1';
-          }
-          cardHost.hidden = false;
-          slot.main.setAttribute('aria-expanded', 'true');
-        } else {
-          cardHost.hidden = true;
-          slot.main.setAttribute('aria-expanded', 'false');
-        }
+    });
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter') { event.preventDefault(); input.blur(); }
+    });
+
+    node.appendChild(num);
+    node.appendChild(h('div', { className: 'row' }, [input, tags, acts]));
+    node.appendChild(anno);
+    node.appendChild(note);
+
+    entry.el = node;
+    entry.refs = { num: num, input: input, tags: tags, anno: anno, note: note };
+    renderAnno(entry);
+    return node;
+  }
+
+  function renderAnno(entry) {
+    if (!entry.refs) return;
+    var anno = entry.refs.anno;
+    anno.textContent = '';
+    var dict = entry.dict;
+
+    if (entry.status === 'loading') {
+      anno.appendChild(h('div', { className: 'line pending', text: '查询中…' }));
+      return;
+    }
+    if (!entry.word) return;
+
+    if (!dict) {
+      anno.appendChild(h('div', { className: 'line missing', text: '本地词库里没有这个词（' + entry.word + '），可以手写批注补充。' }));
+      return;
+    }
+
+    var phoneBits = [];
+    if (dict.uk) phoneBits.push('英 /' + dict.uk + '/');
+    if (dict.us && dict.us !== dict.uk) phoneBits.push('美 /' + dict.us + '/');
+    if (!phoneBits.length && dict.us) phoneBits.push('/' + dict.us + '/');
+    if (phoneBits.length) anno.appendChild(h('div', { className: 'line', text: phoneBits.join('   ') }));
+
+    attachTranslations(anno, dict.cn);
+
+    if (dict.exchange) {
+      anno.appendChild(h('div', { className: 'line usage' }, [h('b', { text: '词形 ' }), dict.exchange]));
+    }
+    if (entry.usage || (entry.ai && entry.ai.usage)) {
+      anno.appendChild(h('div', { className: 'line usage' }, [h('b', { text: '用法 ' }), entry.usage || entry.ai.usage]));
+    }
+    if (dict.en) {
+      var defText = String(dict.en);
+      if (defText.length > 110) defText = defText.slice(0, 110).replace(/\s+\S*$/, '') + '…';
+      anno.appendChild(h('div', { className: 'line def', text: defText }));
+    }
+
+    var examples = entry.examples && entry.examples.length ? entry.examples : (entry.ai && entry.ai.examples) || [];
+    examples.forEach(function (ex) {
+      anno.appendChild(h('div', { className: 'line ex-en', text: ex.en }));
+      if (ex.zh) anno.appendChild(h('div', { className: 'line ex-zh', text: ex.zh }));
+    });
+
+    scheduleInkRedraw();
+
+    if (!examples.length) {
+      var btn = h('button', {
+        type: 'button',
+        className: 'ai-btn',
+        text: state.settings.apiKey ? '✦ 用 AI 生成用法和例句' : '✦ 生成例句（需在设置里填 API Key）',
       });
+      btn.style.cssText = 'border:1px dashed rgba(120,110,90,.45);background:transparent;color:#6f6653;border-radius:10px;padding:4px 10px;font-size:13px;line-height:1.6;margin:2px 0;';
+      btn.addEventListener('click', function () { aiGenerate(entry, btn); });
+      anno.appendChild(btn);
     }
+  }
 
-    var nextIndex = 0;
-    function advance() {
-      stats.done += 1;
-      if (stats.done < words.length) {
-        setStatus('正在查 ' + stats.done + ' / ' + words.length + '…', 'live');
-      }
-    }
-    function worker() {
-      if (nextIndex >= slots.length) return Promise.resolve();
-      var slot = slots[nextIndex];
-      nextIndex += 1;
-      return lookupOne(slot.word).then(function (body) {
-        if (mySeq !== seq) return;
-        fill(slot, body);
-        advance();
-        return worker();
-      });
-    }
-
-    var workers = [];
-    var concurrency = Math.min(4, words.length);
-    for (var i = 0; i < concurrency; i += 1) workers.push(worker());
-
-    Promise.all(workers).then(function () {
-      if (mySeq !== seq) return;
-      var summary = '已标注 ' + stats.ok + ' / ' + info.unique + ' 个词';
-      if (stats.missing) summary += '，' + stats.missing + ' 个未收录';
-      if (info.unique > words.length) {
-        summary += '（共 ' + info.unique + ' 个，只查前 ' + words.length + ' 个）';
-      }
-      setStatus(summary);
+  function attachTranslations(container, cn) {
+    var parts = String(cn || '').split('；').filter(Boolean);
+    if (!parts.length) return;
+    parts.slice(0, 3).forEach(function (text) {
+      var match = /^([a-z]+\.(?:\s*&\s*[a-z]+\.)*)\s*/i.exec(text);
+      var line = h('div', { className: 'line zh' });
+      if (match) line.appendChild(h('span', { className: 'pos', text: match[1] }));
+      line.appendChild(document.createTextNode(match ? text.slice(match[0].length) : text));
+      container.appendChild(line);
     });
   }
 
-  function runLookup(info, text) {
-    var mySeq = ++seq;
-    results.innerHTML = '';
-    if (!info.words.length) {
-      renderIdle();
-      setStatus('');
-      return;
+  /* -------------------------------------------------------------- actions */
+
+  async function annotate(entry, force) {
+    if (!entry.word) { entry.status = 'empty'; renderAnno(entry); return; }
+    if (entry.busy) return;
+    entry.busy = true;
+    entry.status = 'loading';
+    renderAnno(entry);
+
+    var word = entry.word;
+    var dictPromise = lookupWord(word);
+    var examplePromise = state.settings.examples ? fetchExamples(word) : Promise.resolve([]);
+
+    var dict = await dictPromise;
+    entry.dict = dict;
+    entry.status = dict ? 'done' : 'missing';
+    if (dict && entry.refs) entry.refs.tags.textContent = dict.tags || '';
+    renderAnno(entry);
+    scheduleSave();
+
+    var examples = await examplePromise;
+    if (entry.word !== word) { entry.busy = false; return; }
+    if (examples.length) {
+      entry.examples = examples;
+      renderAnno(entry);
+      scheduleSave();
     }
-    var tokens = text.trim().split(/\s+/).filter(Boolean);
-    if (tokens.length <= 1) {
-      runSingle(info.words[0], mySeq);
-      return;
-    }
-    if (tokens.length <= 3) {
-      var phrase = normalizeToken(text).toLowerCase().replace(/[^a-z' -]/g, '').replace(/\s+/g, ' ').trim();
-      if (phrase) { runPhrase(phrase, info, mySeq); return; }
-    }
-    runBatch(info, mySeq);
+    entry.busy = false;
   }
 
-  function scheduleLookup(immediate) {
-    if (timer) clearTimeout(timer);
-    var text = input.value;
-    var info = extractWords(text);
-    var trimmed = text.trim();
-
-    if (!info.words.length) {
-      seq += 1;
-      if (!trimmed) { renderIdle(); setStatus(''); }
-      else { results.innerHTML = ''; setStatus('没有检测到英文单词'); }
+  async function aiGenerate(entry, btn) {
+    if (!state.settings.apiKey) {
+      toast('先在「设置」里填入 API Key', true);
+      els.dlgSettings.showModal();
       return;
     }
-    if (info.words.length === 1 && info.words[0].length < 2) {
-      seq += 1;
-      results.innerHTML = '';
-      setStatus('再输入一个字母…');
-      return;
+    btn.disabled = true;
+    btn.textContent = '生成中…';
+    try {
+      var data = await generateAI(entry.word);
+      entry.ai = data;
+      entry.usage = data.usage;
+      renderAnno(entry);
+      scheduleSave();
+      toast('已生成');
+    } catch (error) {
+      toast('生成失败：' + (error.message === 'no-key' ? '缺少 API Key' : '网络或额度问题'), true);
+      btn.disabled = false;
+      btn.textContent = '✦ 用 AI 生成用法和例句';
     }
-    var delay = immediate ? 0 : (trimmed.split(/\s+/).length <= 3 ? 420 : 700);
-    timer = setTimeout(function () { runLookup(info, trimmed); }, delay);
   }
 
-  function renderBook() {
-    countEl.textContent = String(wordbook.length);
-    bookList.innerHTML = '';
-    exportBtn.disabled = wordbook.length === 0;
-    clearBtn.disabled = wordbook.length === 0;
+  function addEntry(word, options) {
+    var entry = restoreEntry({ word: normalizeWord(word || ''), status: 'empty' });
+    entry.examples = [];
+    state.entries.push(entry);
+    var node = renderEntry(entry);
+    els.entries.appendChild(node);
+    renumber();
+    scheduleSave();
+    if (!options || !options.silent) {
+      entry.refs.input.focus();
+      entry.refs.input.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+    if (entry.word) annotate(entry);
+    return entry;
+  }
 
-    if (!wordbook.length) {
-      bookList.appendChild(el('li', { className: 'empty' }, [
-        el('b', { text: '生词本还是空的。' }),
-        el('div', { text: '查词后点卡片上的「☆ 收藏」，词就留在这台设备的浏览器里。' }),
-      ]));
+  function removeEntry(entry) {
+    if (!entry.word && !entry.note) {
+      entry.el.remove();
+      state.entries = state.entries.filter(function (e) { return e.id !== entry.id; });
+      renumber();
+      scheduleSave();
       return;
     }
-    wordbook.forEach(function (item) {
-      var li = el('li', { className: 'book-item' }, [
-        el('button', {
-          className: 'link', type: 'button',
-          onclick: function () {
-            switchTab('lookup');
-            input.value = item.word;
-            scheduleLookup(true);
-          },
-        }, [
-          el('span', { className: 'w', text: item.word }),
-          el('span', { className: 'b', text: (item.phonetic ? '/' + item.phonetic + '/  ' : '') + (item.brief || '') }),
-        ]),
-        el('button', {
-          className: 'x', type: 'button', 'aria-label': '删除「' + item.word + '」',
-          onclick: function () {
-            if (!window.confirm('从生词本删除「' + item.word + '」？')) return;
-            applyWordbook(removeWord(item.word));
-            toast('已删除「' + item.word + '」');
-          },
-        }, ['×']),
-      ]);
-      bookList.appendChild(li);
+    if (!window.confirm('删除「' + entry.word + '」这条？')) return;
+    entry.el.remove();
+    state.entries = state.entries.filter(function (e) { return e.id !== entry.id; });
+    renumber();
+    scheduleSave();
+  }
+
+  function renumber() {
+    var index = 1;
+    state.entries.forEach(function (entry) {
+      if (entry.refs) entry.refs.num.textContent = String(index);
+      index += 1;
     });
+    els.empty.hidden = state.entries.length > 0;
   }
 
-  function switchTab(name) {
-    Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (btn) {
-      btn.setAttribute('aria-selected', btn.dataset.tab === name ? 'true' : 'false');
-    });
-    viewLookup.hidden = name !== 'lookup';
-    viewBook.hidden = name !== 'book';
-    window.scrollTo(0, 0);
-    if (name === 'book') renderBook();
-  }
+  /* -------------------------------------------------------------- export */
 
-  Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (btn) {
-    btn.addEventListener('click', function () { switchTab(btn.dataset.tab); });
-  });
-
-  input.addEventListener('input', function () { scheduleLookup(false); });
-  input.addEventListener('keydown', function (event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      if (timer) clearTimeout(timer);
-      runLookup(extractWords(input.value), input.value);
-    }
-  });
-
-  document.getElementById('clear-input').addEventListener('click', function () {
-    input.value = '';
-    seq += 1;
-    renderIdle();
-    setStatus('');
-    input.focus();
-  });
-
-  exportBtn.addEventListener('click', function () {
-    if (!wordbook.length) return;
-    var lines = ['单词,音标,中文释义,添加时间'];
-    wordbook.forEach(function (item) {
-      var cells = [
-        item.word,
-        item.phonetic || '',
-        item.brief || '',
-        new Date(item.addedAt || Date.now()).toISOString().slice(0, 10),
-      ].map(function (cell) { return '"' + String(cell).replace(/"/g, '""') + '"'; });
-      lines.push(cells.join(','));
-    });
-    var blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  function download(filename, content, type) {
+    var blob = new Blob([content], { type: type || 'application/json;charset=utf-8' });
     var url = URL.createObjectURL(blob);
     var link = document.createElement('a');
     link.href = url;
-    link.download = '生词本-' + new Date().toISOString().slice(0, 10) + '.csv';
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     link.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
-    toast('已导出 ' + wordbook.length + ' 个词');
-  });
-
-  clearBtn.addEventListener('click', function () {
-    if (!wordbook.length) return;
-    if (!window.confirm('清空生词本里的 ' + wordbook.length + ' 个词？此操作不可撤销。')) return;
-    wordbook = [];
-    persistBook(wordbook);
-    applyWordbook(wordbook);
-    toast('生词本已清空');
-  });
-
-  function prefillFromUrl() {
-    var raw = '';
-    var hash = String(location.hash || '').replace(/^#/, '');
-    var search = String(location.search || '').replace(/^\?/, '');
-    if (hash.indexOf('q=') === 0) raw = hash;
-    else if (search) raw = search;
-    if (!raw) return;
-    var text = '';
-    try { text = new URLSearchParams(raw).get('q') || ''; } catch (e) { text = ''; }
-    if (!text) return;
-    input.value = text;
-    try { history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ }
-    scheduleLookup(true);
   }
 
-  function boot() {
-    renderIdle();
-    serverState.textContent = '本地词库 · 离线可用';
-    applyWordbook(loadBook());
-    window.addEventListener('online', function () { serverState.textContent = '本地词库 · 离线可用'; });
-    window.addEventListener('offline', function () { serverState.textContent = '离线 · 词库在本机'; });
+  function exportJson() {
+    var doc = {
+      app: 'vocab-notebook',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      entries: state.entries.map(serializeEntry),
+    };
+    download('生词本-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(doc, null, 2));
+    toast('已导出 ' + state.entries.length + ' 条');
+  }
+
+  function exportText() {
+    var lines = [];
+    state.entries.forEach(function (entry, index) {
+      if (!entry.word) return;
+      lines.push((index + 1) + '. ' + entry.word + (entry.dict ? '  /' + (entry.dict.uk || entry.dict.us) + '/' : ''));
+      if (entry.dict && entry.dict.cn) lines.push('   ' + entry.dict.cn);
+      if (entry.usage) lines.push('   用法：' + entry.usage);
+      (entry.examples || []).forEach(function (ex) {
+        lines.push('   ' + ex.en);
+        if (ex.zh) lines.push('   ' + ex.zh);
+      });
+      if (entry.note) lines.push('   批注：' + entry.note);
+      lines.push('');
+    });
+    download('生词本-' + new Date().toISOString().slice(0, 10) + '.txt', lines.join('\n'), 'text/plain;charset=utf-8');
+    toast('已导出文本');
+  }
+
+  function importJson(file) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(String(reader.result));
+        var incoming = (data.entries || data).map(restoreEntry).filter(function (entry) { return entry.word; });
+        if (!incoming.length) { toast('文件里没有词条', true); return; }
+        var byWord = Object.create(null);
+        state.entries.forEach(function (entry) { if (entry.word) byWord[entry.word] = entry; });
+        var added = 0;
+        incoming.forEach(function (entry) {
+          if (byWord[entry.word]) return;
+          state.entries.push(entry);
+          els.entries.appendChild(renderEntry(entry));
+          added += 1;
+        });
+        renumber();
+        scheduleSave();
+        toast('导入完成，新增 ' + added + ' 条');
+      } catch (error) {
+        toast('文件格式不对', true);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* --------------------------------------------------------------- wiring */
+
+  document.getElementById('btn-add').addEventListener('click', function () { addEntry(''); });
+
+  document.getElementById('btn-lookup').addEventListener('click', function () {
+    window.open('lookup.html', '_blank');
+  });
+
+  document.getElementById('btn-backup').addEventListener('click', function () { els.dlgBackup.showModal(); });
+  document.getElementById('btn-settings').addEventListener('click', function () {
+    document.getElementById('opt-ai-key').value = state.settings.apiKey || '';
+    document.getElementById('opt-examples').checked = !!state.settings.examples;
+    els.dlgSettings.showModal();
+  });
+
+  document.getElementById('btn-save-settings').addEventListener('click', function () {
+    state.settings.apiKey = document.getElementById('opt-ai-key').value.trim();
+    state.settings.examples = document.getElementById('opt-examples').checked;
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (error) {}
+    els.dlgSettings.close();
+    state.entries.forEach(function (entry) {
+      if (entry.word && !(entry.examples || []).length) renderAnno(entry);
+    });
+    toast('设置已保存');
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-close]'), function (btn) {
+    btn.addEventListener('click', function () {
+      var dlg = btn.closest('dialog');
+      if (dlg) dlg.close();
+    });
+  });
+
+  document.getElementById('btn-export').addEventListener('click', exportJson);
+  document.getElementById('btn-export-text').addEventListener('click', exportText);
+  document.getElementById('btn-import').addEventListener('click', function () {
+    document.getElementById('file-import').click();
+  });
+  document.getElementById('file-import').addEventListener('change', function (event) {
+    var file = event.target.files && event.target.files[0];
+    if (file) importJson(file);
+    event.target.value = '';
+  });
+  document.getElementById('btn-clear').addEventListener('click', function () {
+    if (!state.entries.length) return;
+    if (!window.confirm('清空全部 ' + state.entries.length + ' 条？建议先导出备份。')) return;
+    state.entries = [];
+    els.entries.textContent = '';
+    renumber();
+    scheduleSave();
+    els.dlgBackup.close();
+    toast('已清空');
+  });
+
+  window.addEventListener('beforeunload', function () {
+    if (state.dirty) persist();
+  });
+
+  /* ---------------------------------------------------------------- ink */
+
+  var inkTools = {
+    pen: { width: 2.6, alpha: 1, composite: 'source-over', taper: true },
+    ball: { width: 2.2, alpha: 1, composite: 'source-over', taper: false },
+    marker: { width: 20, alpha: 0.3, composite: 'multiply', taper: false },
+    eraser: { width: 18, alpha: 1, composite: 'source-over', taper: false },
+  };
+  var inkMode = false;
+  var inkTool = 'pen';
+  var inkColor = '#1b2436';
+  var inkCurrent = null;
+  var inkUndo = [];
+  var inkCanvas = null;
+  var inkCtx = null;
+  var inkFrame = 0;
+
+  function ensureInkCanvas() {
+    if (inkCanvas && inkCanvas.isConnected) return inkCanvas;
+    inkCanvas = document.createElement('canvas');
+    inkCanvas.className = 'ink-layer';
+    els.page.appendChild(inkCanvas);
+    inkCtx = inkCanvas.getContext('2d');
+    return inkCanvas;
+  }
+
+  function scheduleInkRedraw() {
+    if (inkFrame) return;
+    inkFrame = requestAnimationFrame(function () {
+      inkFrame = 0;
+      inkRedraw();
+    });
+  }
+
+  function inkRedraw() {
+    var canvas = ensureInkCanvas();
+    var pageRect = els.page.getBoundingClientRect();
+    var dpr = Math.min(window.devicePixelRatio || 1, 3);
+    if (!pageRect.width || !pageRect.height) return;
+    if (canvas.width !== Math.round(pageRect.width * dpr) || canvas.height !== Math.round(pageRect.height * dpr)) {
+      canvas.width = Math.round(pageRect.width * dpr);
+      canvas.height = Math.round(pageRect.height * dpr);
+    }
+    canvas.style.width = pageRect.width + 'px';
+    canvas.style.height = pageRect.height + 'px';
+    var ctx = inkCtx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, pageRect.width, pageRect.height);
+    state.entries.forEach(function (entry) {
+      if (!entry.ink || !entry.ink.length || !entry.el) return;
+      var rect = entry.el.getBoundingClientRect();
+      var ox = rect.left - pageRect.left;
+      var oy = rect.top - pageRect.top;
+      entry.ink.forEach(function (stroke) { drawInkStroke(ctx, stroke, ox, oy); });
+    });
+  }
+
+  function drawInkStroke(ctx, stroke, ox, oy) {
+    var cfg = inkTools[stroke.tool] || inkTools.pen;
+    var points = stroke.points || [];
+    if (!points.length) return;
+    ctx.save();
+    ctx.globalAlpha = cfg.alpha;
+    ctx.globalCompositeOperation = cfg.composite;
+    ctx.strokeStyle = stroke.color || '#1b2436';
+    ctx.fillStyle = stroke.color || '#1b2436';
+    ctx.lineJoin = 'round';
+    ctx.lineCap = stroke.tool === 'marker' ? 'butt' : 'round';
+    var width = stroke.width || cfg.width;
+    if (points.length === 1) {
+      ctx.beginPath();
+      ctx.arc(ox + points[0][0], oy + points[0][1], width / 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (cfg.taper) {
+      for (var i = 1; i < points.length; i += 1) {
+        var a = points[i - 1];
+        var b = points[i];
+        var pressure = typeof b[2] === 'number' ? b[2] : 0.5;
+        ctx.lineWidth = Math.max(0.9, width * (0.45 + pressure * 1.15));
+        ctx.beginPath();
+        ctx.moveTo(ox + a[0], oy + a[1]);
+        ctx.lineTo(ox + b[0], oy + b[1]);
+        ctx.stroke();
+      }
+    } else {
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(ox + points[0][0], oy + points[0][1]);
+      for (var j = 1; j < points.length - 1; j += 1) {
+        var mx = (points[j][0] + points[j + 1][0]) / 2;
+        var my = (points[j][1] + points[j + 1][1]) / 2;
+        ctx.quadraticCurveTo(ox + points[j][0], oy + points[j][1], ox + mx, oy + my);
+      }
+      var last = points[points.length - 1];
+      ctx.lineTo(ox + last[0], oy + last[1]);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  function entryAtPagePoint(clientX, clientY) {
+    var pageRect = els.page.getBoundingClientRect();
+    var y = clientY - pageRect.top;
+    var found = null;
+    state.entries.forEach(function (entry) {
+      if (!entry.el) return;
+      var rect = entry.el.getBoundingClientRect();
+      var top = rect.top - pageRect.top;
+      if (y >= top - 4 && y <= top + rect.height + 8) found = entry;
+    });
+    return found;
+  }
+
+  function pointInEntry(entry, clientX, clientY) {
+    var rect = entry.el.getBoundingClientRect();
+    var pressure = 0.5;
+    return [
+      Math.round((clientX - rect.left) * 10) / 10,
+      Math.round((clientY - rect.top) * 10) / 10,
+      pressure,
+    ];
+  }
+
+  function eraseAtPoint(entry, point) {
+    var removed = null;
+    var radius = 16;
+    for (var i = entry.ink.length - 1; i >= 0; i -= 1) {
+      var stroke = entry.ink[i];
+      var hit = stroke.points.some(function (p) {
+        var dx = p[0] - point[0];
+        var dy = p[1] - point[1];
+        return dx * dx + dy * dy < radius * radius;
+      });
+      if (hit) {
+        removed = entry.ink.splice(i, 1)[0];
+        break;
+      }
+    }
+    if (removed) {
+      inkUndo.push({ entry: entry, stroke: removed, erased: true });
+      scheduleInkRedraw();
+      scheduleSave();
+    }
+  }
+
+  function inkPointerDown(event) {
+    if (!inkMode) return;
+    if (event.pointerType === 'touch') return;
+    var entry = entryAtPagePoint(event.clientX, event.clientY);
+    if (!entry) return;
+    event.preventDefault();
+    try { els.page.setPointerCapture(event.pointerId); } catch (error) {}
+    var point = pointInEntry(entry, event.clientX, event.clientY);
+    if (typeof event.pressure === 'number' && event.pressure > 0) point[2] = event.pressure;
+
+    if (inkTool === 'eraser') {
+      eraseAtPoint(entry, point);
+      inkCurrent = { erasing: true, entry: entry };
+      return;
+    }
+    var stroke = { tool: inkTool, color: inkColor, width: inkTools[inkTool].width, points: [point] };
+    entry.ink.push(stroke);
+    inkCurrent = { entry: entry, stroke: stroke };
+    scheduleInkRedraw();
+  }
+
+  function inkPointerMove(event) {
+    if (!inkCurrent) return;
+    if (event.pointerType === 'touch') return;
+    var entry = inkCurrent.entry;
+    if (!entry) return;
+    event.preventDefault();
+    var point = pointInEntry(entry, event.clientX, event.clientY);
+    if (typeof event.pressure === 'number' && event.pressure > 0) point[2] = event.pressure;
+    if (inkCurrent.erasing) {
+      eraseAtPoint(entry, point);
+      return;
+    }
+    var points = inkCurrent.stroke.points;
+    var last = points[points.length - 1];
+    var dx = point[0] - last[0];
+    var dy = point[1] - last[1];
+    if (dx * dx + dy * dy < 2.2) return;
+    points.push(point);
+    scheduleInkRedraw();
+  }
+
+  function inkPointerUp() {
+    if (!inkCurrent) return;
+    if (!inkCurrent.erasing && inkCurrent.stroke) {
+      inkUndo.push({ entry: inkCurrent.entry, stroke: inkCurrent.stroke, erased: false });
+      scheduleSave();
+    }
+    inkCurrent = null;
+  }
+
+  function setPenMode(on) {
+    inkMode = on;
+    els.page.classList.toggle('pen-mode', on);
+    document.getElementById('penbar').hidden = !on;
+    document.getElementById('btn-pen').setAttribute('aria-pressed', String(on));
+    if (on) ensureInkCanvas();
+    scheduleInkRedraw();
+  }
+
+  els.page.addEventListener('pointerdown', inkPointerDown);
+  els.page.addEventListener('pointermove', inkPointerMove);
+  els.page.addEventListener('pointerup', inkPointerUp);
+  els.page.addEventListener('pointercancel', inkPointerUp);
+  window.addEventListener('resize', scheduleInkRedraw);
+
+  document.getElementById('btn-pen').addEventListener('click', function () {
+    setPenMode(!inkMode);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.penbar .tool'), function (btn) {
+    btn.addEventListener('click', function () {
+      inkTool = btn.dataset.tool;
+      Array.prototype.forEach.call(document.querySelectorAll('.penbar .tool'), function (other) {
+        other.setAttribute('aria-pressed', String(other === btn));
+      });
+      if (inkTool === 'marker' && inkColor === '#1b2436') {
+        inkColor = '#f2c200';
+        Array.prototype.forEach.call(document.querySelectorAll('.penbar .swatch'), function (dot) {
+          dot.setAttribute('aria-pressed', String(dot.dataset.color === inkColor));
+        });
+      }
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.penbar .swatch'), function (dot) {
+    dot.addEventListener('click', function () {
+      inkColor = dot.dataset.color;
+      Array.prototype.forEach.call(document.querySelectorAll('.penbar .swatch'), function (other) {
+        other.setAttribute('aria-pressed', String(other === dot));
+      });
+    });
+  });
+  document.getElementById('pen-undo').addEventListener('click', function () {
+    var last = inkUndo.pop();
+    if (!last) { toast('没有可撤销的笔迹'); return; }
+    var list = last.entry.ink || [];
+    if (last.erased) list.push(last.stroke);
+    else {
+      var index = list.indexOf(last.stroke);
+      if (index >= 0) list.splice(index, 1);
+    }
+    scheduleInkRedraw();
+    scheduleSave();
+  });
+  document.getElementById('pen-clear').addEventListener('click', function () {
+    var total = state.entries.reduce(function (sum, entry) { return sum + (entry.ink ? entry.ink.length : 0); }, 0);
+    if (!total) { toast('这一页还没有笔迹'); return; }
+    if (!window.confirm('清空整页 ' + total + ' 处笔迹？')) return;
+    state.entries.forEach(function (entry) { entry.ink = []; });
+    inkUndo = [];
+    scheduleInkRedraw();
+    scheduleSave();
+    toast('已清空笔迹');
+  });
+  document.getElementById('pen-done').addEventListener('click', function () { setPenMode(false); });
+
+  /* ----------------------------------------------------------------- boot */
+
+  function withTimeout(promise, ms, fallback) {
+    return Promise.race([
+      promise,
+      new Promise(function (resolve) { setTimeout(function () { resolve(fallback); }, ms); }),
+    ]);
+  }
+
+  function renderDoc(doc) {
+    els.entries.textContent = '';
+    state.entries = [];
+    state.savedAt = doc.savedAt || 0;
+    (doc.entries || []).forEach(function (raw) {
+      var entry = restoreEntry(raw);
+      if (!entry.word && !entry.note) return;
+      state.entries.push(entry);
+      els.entries.appendChild(renderEntry(entry));
+    });
+    renumber();
+    state.entries.forEach(function (entry) {
+      if (entry.word && !entry.dict) annotate(entry);
+    });
+    updateMeta();
+  }
+
+  async function boot() {
+    try {
+      var settingsRaw = localStorage.getItem(SETTINGS_KEY);
+      if (settingsRaw) state.settings = Object.assign(state.settings, JSON.parse(settingsRaw));
+    } catch (error) {}
+
+    state.loaded = true;
+
+    var dateEl = document.getElementById('date-line');
+    if (dateEl) {
+      var now = new Date();
+      dateEl.textContent = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' + now.getDate() + '日 · 星期' + '日一二三四五六'.charAt(now.getDay());
+    }
+
+    // The localStorage mirror loads synchronously, so the page never waits on IndexedDB.
+    var mirrorDoc = null;
+    try {
+      var rawMirror = localStorage.getItem(MIRROR_KEY);
+      if (rawMirror) mirrorDoc = JSON.parse(rawMirror);
+    } catch (error) { mirrorDoc = null; }
+
+    if (mirrorDoc && Array.isArray(mirrorDoc.entries) && mirrorDoc.entries.length) {
+      renderDoc(mirrorDoc);
+    }
+
+    try {
+      var dbDoc = await withTimeout(dbRead(), 2500, null);
+      if (dbDoc && Array.isArray(dbDoc.entries) && dbDoc.entries.length) {
+        if (!mirrorDoc || (dbDoc.savedAt || 0) > (mirrorDoc.savedAt || 0)) renderDoc(dbDoc);
+      }
+    } catch (error) {
+      console.warn('indexeddb read failed', error);
+    }
+
+    if (!state.entries.length) {
+      var first = addEntry('', { silent: true });
+      first.refs.input.focus();
+    }
+    updateMeta();
+
+    var params = new URLSearchParams(location.search);
+    var prefill = params.get('word') || params.get('q');
+    if (prefill) {
+      var blank = state.entries.length === 1 && !state.entries[0].word ? state.entries[0] : null;
+      if (blank) {
+        blank.word = normalizeWord(prefill);
+        blank.refs.input.value = blank.word;
+        annotate(blank);
+        scheduleSave();
+      } else {
+        addEntry(prefill);
+      }
+      try { history.replaceState(null, '', location.pathname); } catch (error) {}
+    }
   }
 
   boot();
-  prefillFromUrl();
 })();
-
 </script>
 </body>
 </html>

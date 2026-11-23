@@ -1,0 +1,918 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1113" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-title" content="生词助手">
+<meta name="description" content="写下英文单词立即显示中文释义，粘贴整段英文逐词标注，生词本可导出 CSV。词库离线可用。">
+<title>生词助手</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --card-border: rgba(15, 18, 24, 0.08);
+    --text: #16181c;
+    --muted: #59616e;
+    --accent: #2f6fed;
+    --accent-strong: #1f5fd0;
+    --accent-soft: rgba(47, 111, 237, 0.10);
+    --chip: rgba(15, 18, 24, 0.05);
+    --pos: #0f7b6c;
+    --danger: #c83838;
+    --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px rgba(16, 24, 40, 0.06);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1113;
+      --card: #191b1f;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #e9eaec;
+      --muted: #9aa2ad;
+      --accent: #6f9bff;
+      --accent-strong: #8fb2ff;
+      --accent-soft: rgba(111, 155, 255, 0.14);
+      --chip: rgba(255, 255, 255, 0.07);
+      --pos: #57c9b3;
+      --danger: #ff8a8a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { scroll-padding-top: 84px; -webkit-text-size-adjust: 100%; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 17px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  header {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px 10px;
+    padding-top: calc(12px + env(safe-area-inset-top));
+    background: var(--bg);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--card-border);
+  }
+  .brand { font-weight: 700; font-size: 19px; letter-spacing: 0.01em; flex: 1; min-width: 0; }
+  .brand small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); letter-spacing: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tabs { display: flex; background: var(--chip); border-radius: 999px; padding: 3px; gap: 2px; flex: none; }
+  .tabs button {
+    border: 0; background: transparent; color: var(--muted);
+    font: inherit; font-size: 15px; font-weight: 600;
+    padding: 7px 14px; min-height: 44px; border-radius: 999px; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); box-shadow: var(--shadow); }
+  .badge {
+    min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+    background: var(--accent); color: #fff; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  main { flex: 1; padding: 16px 16px calc(32px + env(safe-area-inset-bottom)); max-width: 860px; width: 100%; margin: 0 auto; }
+  .search { position: relative; }
+  textarea#input {
+    width: 100%; min-height: 92px; max-height: 40vh; resize: none;
+    padding: 16px 56px 16px 16px;
+    font: inherit; font-size: 21px; line-height: 1.4;
+    color: var(--text); background: var(--card);
+    border: 1px solid var(--card-border); border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    outline: none;
+  }
+  textarea#input::placeholder { color: var(--muted); font-size: 18px; }
+  textarea#input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .clear-btn {
+    position: absolute; top: 8px; right: 8px;
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 0; background: transparent; color: var(--muted);
+    font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  .status { margin: 12px 2px 0; font-size: 14px; color: var(--muted); min-height: 21px; }
+  .status.live { color: var(--accent-strong); }
+  .status.error { color: var(--danger); }
+  #results { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+
+  .idle { padding: 22px 4px 8px; color: var(--muted); }
+  .idle-lead { margin: 0 0 14px; font-size: 17px; color: var(--text); }
+  .examples { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .example {
+    border: 1px solid var(--card-border); background: var(--card); color: var(--accent-strong);
+    font: inherit; font-size: 16px; font-weight: 600;
+    padding: 11px 16px; min-height: 44px; border-radius: 999px; cursor: pointer;
+    box-shadow: var(--shadow);
+  }
+  .idle-tip { margin: 0; font-size: 15px; line-height: 1.6; }
+  .note { margin: 0; font-size: 15px; color: var(--muted); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 18px; animation: fade 0.18s ease-out;
+  }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  .word-row { display: flex; align-items: center; gap: 10px; }
+  .word-row h2 { margin: 0; font-size: 30px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; word-break: break-word; min-width: 0; }
+  .star {
+    margin-left: auto; flex: none;
+    border: 1px solid var(--card-border); background: var(--chip); color: var(--text);
+    border-radius: 999px; padding: 9px 15px; min-height: 44px;
+    font: inherit; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .star[data-saved="true"] { background: var(--accent-soft); border-color: transparent; color: var(--accent-strong); }
+  .star:disabled { opacity: 0.6; cursor: progress; }
+  .phon { margin-top: 6px; color: var(--muted); font-size: 15px; display: flex; flex-wrap: wrap; gap: 6px 14px; }
+  .phon span { display: inline-flex; align-items: center; gap: 6px; }
+  .speak {
+    border: 0; background: var(--chip); color: var(--accent-strong);
+    width: 44px; height: 44px; margin: -8px 0 -8px -4px; border-radius: 50%; cursor: pointer; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .speak:active { transform: scale(0.94); }
+  ul.trs { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  ul.trs li { font-size: 18px; line-height: 1.5; overflow-wrap: anywhere; }
+  .pos {
+    display: inline-block; min-width: 34px; margin-right: 6px;
+    color: var(--pos); font-weight: 700; font-size: 15px; font-style: italic;
+  }
+  .sect { margin-top: 16px; border-top: 1px dashed var(--card-border); padding-top: 12px; }
+  .sect h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .ex { margin: 0 0 10px; overflow-wrap: anywhere; }
+  .ex .en { font-size: 16px; }
+  .ex .zh { font-size: 15px; color: var(--muted); margin-top: 2px; }
+  .phrs { display: grid; grid-template-columns: 1fr; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .phrs li { display: flex; gap: 10px; font-size: 16px; }
+  .phrs b { font-weight: 600; flex: none; }
+  .phrs span { color: var(--muted); overflow-wrap: anywhere; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { background: var(--chip); border-radius: 8px; padding: 4px 9px; font-size: 14px; color: var(--muted); }
+
+  .row-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .row {
+    display: flex; align-items: stretch; gap: 8px;
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 14px;
+    box-shadow: var(--shadow); padding: 8px 10px;
+  }
+  .row-main {
+    flex: 1; min-width: 0; text-align: left; cursor: pointer;
+    background: transparent; border: 0; color: var(--text); font: inherit;
+    padding: 6px 4px; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: baseline;
+  }
+  .row-main .w { font-size: 20px; font-weight: 700; overflow-wrap: anywhere; }
+  .row-main .ph { font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+  .row-main .tr { grid-column: 1 / -1; font-size: 16px; overflow-wrap: anywhere; }
+  .row-main .tr.muted { color: var(--muted); }
+  .row-star {
+    flex: none; width: 44px; min-height: 44px; align-self: center;
+    border: 0; border-radius: 12px; background: var(--chip); color: var(--text);
+    font-size: 18px; line-height: 1; cursor: pointer;
+  }
+  .row-star[data-saved="true"] { background: var(--accent-soft); color: var(--accent-strong); }
+  .row-star:disabled { opacity: 0.6; cursor: progress; }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 12px; }
+  .toolbar button {
+    flex: 1; padding: 11px 12px; min-height: 44px; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600;
+    background: var(--card); color: var(--text); border: 1px solid var(--card-border); cursor: pointer;
+  }
+  .toolbar button.danger { color: var(--danger); }
+  .toolbar button:disabled { opacity: 0.45; cursor: default; }
+  .book-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .book-item {
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center;
+    background: var(--card); border: 1px solid var(--card-border); border-radius: 14px;
+    padding: 10px 10px 10px 14px; box-shadow: var(--shadow);
+  }
+  .book-item button.link { all: unset; cursor: pointer; display: block; min-height: 44px; padding: 6px 0; -webkit-user-select: none; user-select: none; }
+  .book-item .w { display: block; font-size: 19px; font-weight: 700; overflow-wrap: anywhere; }
+  .book-item .b { display: block; font-size: 15px; color: var(--muted); overflow-wrap: anywhere; }
+  .book-item .x {
+    border: 0; background: transparent; color: var(--muted);
+    width: 44px; height: 44px; border-radius: 50%; font-size: 20px; cursor: pointer; grid-row: 1 / span 2;
+  }
+  .empty { text-align: center; color: var(--muted); padding: 36px 12px; font-size: 16px; line-height: 1.7; }
+  .empty b { color: var(--text); }
+  .footer-note { margin-top: 22px; text-align: center; font-size: 12px; color: var(--muted); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 12px);
+    background: rgba(22, 24, 28, 0.94); color: #fff;
+    padding: 11px 18px; border-radius: 999px; font-size: 15px; font-weight: 600;
+    opacity: 0; pointer-events: none; transition: opacity 0.18s, transform 0.18s;
+    max-width: calc(100vw - 48px); text-align: center; z-index: 40;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.error { background: rgba(180, 40, 40, 0.96); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">生词助手<small id="server-state">连接中…</small></div>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" aria-selected="true" data-tab="lookup">查词</button>
+    <button type="button" role="tab" aria-selected="false" data-tab="book">生词本 <span class="badge" id="count">0</span></button>
+  </div>
+</header>
+
+<main>
+  <section id="view-lookup">
+    <div class="search">
+      <textarea id="input" rows="2" autocapitalize="off" autocorrect="off" spellcheck="false"
+        placeholder="写下英文单词，或粘贴整段英文…" enterkeyhint="search"></textarea>
+      <button class="clear-btn" id="clear-input" aria-label="清空">×</button>
+    </div>
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+    <div id="results"></div>
+  </section>
+
+  <section id="view-book" hidden>
+    <div class="toolbar">
+      <button type="button" id="export-csv">导出 CSV</button>
+      <button type="button" class="danger" id="clear-book">清空生词本</button>
+    </div>
+    <ul class="book-list" id="book-list"></ul>
+    <div class="footer-note">生词保存在这台设备的浏览器里；导出的 CSV 可导入 Anki、欧路词典或 Excel。<br>词库：CET4/6、考研、雅思、托福、GRE、专八、COCA 20000（共 21760 词），来自 qwerty-learner 开源词表。</div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var input = document.getElementById('input');
+  var statusEl = document.getElementById('status');
+  var results = document.getElementById('results');
+  var countEl = document.getElementById('count');
+  var serverState = document.getElementById('server-state');
+  var bookList = document.getElementById('book-list');
+  var viewLookup = document.getElementById('view-lookup');
+  var viewBook = document.getElementById('view-book');
+  var toastEl = document.getElementById('toast');
+  var exportBtn = document.getElementById('export-csv');
+  var clearBtn = document.getElementById('clear-book');
+
+  var STORE_KEY = 'vocab-lens:wordbook:v1';
+
+  var wordbook = [];
+  var savedWords = new Set();
+  var seq = 0;
+  var timer = null;
+  var toastTimer = null;
+  var detailCache = Object.create(null);
+
+  var WORD_RE = /[A-Za-z][A-Za-z'\u2019\u02BC\-\u2010-\u2015]*/g;
+
+  /* ---------------------------------------------------------------- utils */
+
+  function normalizeToken(text) {
+    return String(text)
+      .replace(/[\u2018\u2019\u02BC]/g, "'")
+      .replace(/[\u2010-\u2015]/g, '-');
+  }
+
+  function stripTags(value) {
+    return String(value || '')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .trim();
+  }
+
+  function splitTranslation(text) {
+    var match = /^([a-z]+\.(?:\s*&\s*[a-z]+\.)*)\s*/i.exec(text);
+    if (!match) return { pos: '', text: text.trim() };
+    return { pos: match[1], text: text.slice(match[0].length).trim() };
+  }
+
+  function pickList(value) {
+    return Array.isArray(value) ? value : value ? [value] : [];
+  }
+
+  function extractWords(text) {
+    var norm = normalizeToken(text);
+    var seen = Object.create(null);
+    var out = [];
+    var total = 0;
+    var m;
+    WORD_RE.lastIndex = 0;
+    while ((m = WORD_RE.exec(norm)) !== null) {
+      var w = m[0].replace(/^[-']+|[-']+$/g, '').toLowerCase();
+      if (!w) continue;
+      total += 1;
+      if (seen[w]) continue;
+      seen[w] = true;
+      out.push(w);
+    }
+    return { words: out.slice(0, 40), unique: out.length, occurrences: total };
+  }
+
+  function setStatus(text, cls) {
+    statusEl.textContent = text || '';
+    statusEl.className = 'status' + (cls ? ' ' + cls : '');
+  }
+
+  function toast(message, isError) {
+    toastEl.textContent = message;
+    toastEl.className = 'toast show' + (isError ? ' error' : '');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.className = 'toast'; }, 2400);
+  }
+
+  function el(tag, props, children) {
+    var node = document.createElement(tag);
+    if (props) {
+      Object.keys(props).forEach(function (key) {
+        var value = props[key];
+        if (key === 'text') node.textContent = value;
+        else if (key === 'className') node.className = value;
+        else if (key === 'dataset') Object.keys(value).forEach(function (k) { node.dataset[k] = value[k]; });
+        else if (key.slice(0, 2) === 'on') node.addEventListener(key.slice(2), value);
+        else if (value === true) node.setAttribute(key, '');
+        else if (value !== false && value != null) node.setAttribute(key, value);
+      });
+    }
+    (children || []).forEach(function (child) {
+      if (child == null) return;
+      node.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+    });
+    return node;
+  }
+
+  /* ------------------------------------------------------------ dictionary */
+
+  var shardCache = Object.create(null);
+
+  function loadShard(letter) {
+    if (shardCache[letter]) return shardCache[letter];
+    var request = fetch('dict/' + letter + '.json').then(function (res) {
+      if (!res.ok) throw new Error('shard ' + res.status);
+      return res.json();
+    }).catch(function (error) {
+      delete shardCache[letter];
+      throw error;
+    });
+    shardCache[letter] = request;
+    return request;
+  }
+
+  function entryFromRow(word, row) {
+    var translations = String(row[2] || '').split('；').filter(Boolean).map(function (text) {
+      var match = /^([a-z]+\.(?:\s*&\s*[a-z]+\.)*)\s*/i.exec(text);
+      if (!match) return { pos: '', text: text };
+      return { pos: match[1], text: text.slice(match[0].length) };
+    });
+    return {
+      word: word,
+      phonetic: { us: row[0] || '', uk: row[1] || '' },
+      audio: {
+        us: 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=2',
+        uk: 'https://dict.youdao.com/dictvoice?audio=' + encodeURIComponent(word) + '&type=1',
+      },
+      translations: translations,
+      examples: [],
+      phrases: [],
+      forms: [],
+      webTrans: [],
+      definitions: [],
+    };
+  }
+
+  function lookupOne(word) {
+    var cached = detailCache[word];
+    if (cached) return Promise.resolve(cached);
+    var key = String(word || '').toLowerCase();
+    if (!key) return Promise.resolve({ ok: false, error: 'empty' });
+    var letter = key[0];
+    if (!/[a-z]/.test(letter)) return Promise.resolve({ ok: false, error: 'not-found' });
+    return loadShard(letter).then(function (shard) {
+      var row = shard && shard[key];
+      if (!row) return { ok: false, error: 'not-found' };
+      var body = { ok: true, entry: entryFromRow(key, row) };
+      detailCache[key] = body;
+      return body;
+    }).catch(function () {
+      return { ok: false, error: 'network' };
+    });
+  }
+
+  /* --------------------------------------------------------------- storage */
+
+  function loadBook() {
+    try {
+      var raw = window.localStorage.getItem(STORE_KEY);
+      var parsed = raw ? JSON.parse(raw) : [];
+      return Array.isArray(parsed) ? parsed.filter(function (item) { return item && item.word; }) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function persistBook(items) {
+    try {
+      window.localStorage.setItem(STORE_KEY, JSON.stringify(items));
+    } catch (e) {
+      toast('浏览器存储不可用，收藏没有保存', true);
+    }
+    return items;
+  }
+
+  function addWord(word, entry) {
+    var existing = null;
+    for (var i = 0; i < wordbook.length; i += 1) {
+      if (wordbook[i].word === word) { existing = wordbook[i]; break; }
+    }
+    if (existing) {
+      existing.count = (existing.count || 1) + 1;
+      return persistBook(wordbook);
+    }
+    wordbook.unshift({
+      word: word,
+      phonetic: (entry && entry.phonetic && (entry.phonetic.us || entry.phonetic.uk)) || '',
+      brief: briefOf(entry),
+      addedAt: Date.now(),
+      count: 1,
+    });
+    return persistBook(wordbook);
+  }
+
+  function removeWord(word) {
+    wordbook = wordbook.filter(function (item) { return item.word !== word; });
+    return persistBook(wordbook);
+  }
+
+  function briefOf(entry) {
+    if (!entry || !entry.translations || !entry.translations.length) return '';
+    var first = entry.translations[0];
+    return (first.pos ? first.pos + ' ' : '') + first.text;
+  }
+
+  /* ------------------------------------------------------------------- ui */
+
+  function refreshStars() {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-star-word]'), function (btn) {
+      var saved = savedWords.has(btn.dataset.starWord);
+      btn.dataset.saved = String(saved);
+      btn.setAttribute('aria-pressed', String(saved));
+      btn.textContent = btn.classList.contains('row-star') ? (saved ? '★' : '☆') : (saved ? '★ 已收藏' : '☆ 收藏');
+    });
+  }
+
+  function applyWordbook(items) {
+    wordbook = items || [];
+    savedWords = new Set(wordbook.map(function (item) { return item.word; }));
+    countEl.textContent = String(wordbook.length);
+    refreshStars();
+    renderBook();
+  }
+
+  function makeStar(word, entry, compact) {
+    var saved = savedWords.has(word);
+    var btn = el('button', {
+      className: compact ? 'row-star' : 'star',
+      type: 'button',
+      'aria-pressed': String(saved),
+      dataset: { saved: String(saved), starWord: word },
+    }, [compact ? (saved ? '★' : '☆') : (saved ? '★ 已收藏' : '☆ 收藏')]);
+
+    btn.addEventListener('click', function (event) {
+      event.stopPropagation();
+      var wasSaved = savedWords.has(word);
+      applyWordbook(wasSaved ? removeWord(word) : addWord(word, entry));
+      toast(wasSaved ? '已从生词本移除' : '已加入生词本');
+    });
+    return btn;
+  }
+
+  function playAudio(url) {
+    if (!url) return;
+    try {
+      var audio = new Audio(url);
+      audio.play().catch(function () {});
+    } catch (e) { /* ignore */ }
+  }
+
+  function speakButton(url) {
+    return el('button', {
+      className: 'speak', type: 'button', 'aria-label': '发音',
+      onclick: function (event) { event.stopPropagation(); playAudio(url); },
+    }, ['🔊']);
+  }
+
+  function phonLine(entry) {
+    var us = entry.phonetic && entry.phonetic.us;
+    var uk = entry.phonetic && entry.phonetic.uk;
+    var wrap = el('div', { className: 'phon' });
+    if (uk) wrap.appendChild(el('span', {}, ['英 /' + uk + '/', speakButton(entry.audio.uk)]));
+    if (us && us !== uk) wrap.appendChild(el('span', {}, ['美 /' + us + '/', speakButton(entry.audio.us)]));
+    if (!uk && !us && entry.audio && entry.audio.us) wrap.appendChild(el('span', {}, ['发音', speakButton(entry.audio.us)]));
+    return wrap.children.length ? wrap : null;
+  }
+
+  function renderEntry(entry) {
+    var card = el('article', { className: 'card' });
+    card.appendChild(el('div', { className: 'word-row' }, [
+      el('h2', { text: entry.word }),
+      makeStar(entry.word, entry, false),
+    ]));
+
+    var phon = phonLine(entry);
+    if (phon) card.appendChild(phon);
+
+    if (entry.translations && entry.translations.length) {
+      var list = el('ul', { className: 'trs' });
+      entry.translations.forEach(function (tr) {
+        list.appendChild(el('li', {}, [
+          tr.pos ? el('span', { className: 'pos', text: tr.pos }) : null,
+          tr.text,
+        ]));
+      });
+      card.appendChild(list);
+    } else if (entry.webTrans && entry.webTrans.length) {
+      card.appendChild(el('ul', { className: 'trs' }, [
+        el('li', {}, [el('span', { className: 'pos', text: '网络' }), entry.webTrans.slice(0, 4).join('；')]),
+      ]));
+    }
+
+    if (entry.examples && entry.examples.length) {
+      var sect = el('div', { className: 'sect' });
+      sect.appendChild(el('h3', { text: '例句' }));
+      entry.examples.forEach(function (ex) {
+        sect.appendChild(el('div', { className: 'ex' }, [
+          el('div', { className: 'en', text: ex.en }),
+          ex.zh ? el('div', { className: 'zh', text: ex.zh }) : null,
+        ]));
+      });
+      card.appendChild(sect);
+    }
+
+    if (entry.phrases && entry.phrases.length) {
+      var ph = el('div', { className: 'sect' });
+      ph.appendChild(el('h3', { text: '短语' }));
+      var ul = el('ul', { className: 'phrs' });
+      entry.phrases.forEach(function (item) {
+        ul.appendChild(el('li', {}, [el('b', { text: item.en }), el('span', { text: item.zh })]));
+      });
+      ph.appendChild(ul);
+      card.appendChild(ph);
+    }
+
+    if (entry.webTrans && entry.webTrans.length && entry.translations && entry.translations.length) {
+      var web = el('div', { className: 'sect' });
+      web.appendChild(el('h3', { text: '网络释义' }));
+      var webTags = el('div', { className: 'tags' });
+      entry.webTrans.slice(0, 6).forEach(function (item) { webTags.appendChild(el('span', { className: 'tag', text: item })); });
+      web.appendChild(webTags);
+      card.appendChild(web);
+    }
+
+    return card;
+  }
+
+  function errorCard(word, code) {
+    var messages = {
+      'not-found': '本地词库里没有「' + word + '」，确认一下拼写？',
+      network: '词库文件没加载出来，检查网络后点这里重试。',
+      timeout: '词典响应太慢，稍等一下再试。',
+      empty: '输入为空。',
+    };
+    var card = el('div', { className: 'card empty' });
+    card.appendChild(el('div', { text: messages[code] || '查询失败：' + code }));
+    if (code !== 'empty') {
+      card.appendChild(el('button', {
+        className: 'star', type: 'button', text: '重试', style: 'margin:12px auto 0',
+        onclick: function () { runLookup(extractWords(word), word); },
+      }));
+    }
+    return card;
+  }
+
+  function renderIdle() {
+    results.innerHTML = '';
+    var box = el('div', { className: 'idle' });
+    box.appendChild(el('p', { className: 'idle-lead', text: '写下英文单词就出中文；粘贴整段英文会逐个标注。' }));
+    var chips = el('div', { className: 'examples' });
+    ['ubiquitous', 'ephemeral', 'resilient'].forEach(function (word) {
+      chips.appendChild(el('button', {
+        className: 'example', type: 'button', text: word,
+        onclick: function () { input.value = word; scheduleLookup(true); },
+      }));
+    });
+    box.appendChild(chips);
+    box.appendChild(el('p', { className: 'idle-tip', text: '查完点 ☆ 存进生词本；右上角生词本里可以导出 CSV。' }));
+    results.appendChild(box);
+  }
+
+  function showEntry(entry, mySeq) {
+    if (mySeq !== seq) return;
+    results.innerHTML = '';
+    results.appendChild(renderEntry(entry));
+    setStatus('');
+  }
+
+  function showFailure(word, error, mySeq) {
+    if (mySeq !== seq) return;
+    results.innerHTML = '';
+    results.appendChild(errorCard(word, error));
+    setStatus('', error === 'network' || error === 'timeout' ? 'error' : '');
+  }
+
+  function runSingle(word, mySeq) {
+    setStatus('正在查「' + word + '」…', 'live');
+    lookupOne(word).then(function (body) {
+      if (mySeq !== seq) return;
+      if (body.ok && body.entry) showEntry(body.entry, mySeq);
+      else showFailure(word, body.error || 'not-found', mySeq);
+    });
+  }
+
+  function runPhrase(phrase, info, mySeq) {
+    setStatus('正在查「' + phrase + '」…', 'live');
+    lookupOne(phrase).then(function (body) {
+      if (mySeq !== seq) return;
+      if (body.ok && body.entry) showEntry(body.entry, mySeq);
+      else runBatch(info, mySeq, '词组没查到，按单词分别释义：');
+    });
+  }
+
+  function runBatch(info, mySeq, note) {
+    var words = info.words;
+    var stats = { done: 0, ok: 0, missing: 0 };
+
+    if (note) results.appendChild(el('p', { className: 'note', text: note }));
+    setStatus('正在查 ' + words.length + ' 个词…', 'live');
+
+    var slots = words.map(function (word) {
+      var phon = el('span', { className: 'ph' });
+      var holder = el('span', { className: 'tr muted', text: '查询中…' });
+      var main = el('button', { className: 'row-main', type: 'button', 'aria-expanded': 'false' }, [
+        el('span', { className: 'w', text: word }),
+        phon,
+        holder,
+      ]);
+      var rowEl = el('div', { className: 'row' }, [main]);
+      var wrap = el('div', { className: 'row-wrap' }, [rowEl]);
+      results.appendChild(wrap);
+      return { word: word, wrap: wrap, row: rowEl, main: main, phon: phon, holder: holder };
+    });
+
+    function fill(slot, body) {
+      if (!body.ok || !body.entry) {
+        stats.missing += 1;
+        slot.holder.textContent = body.error === 'not-found' ? '未收录' : '查询失败';
+        slot.holder.className = 'tr muted';
+        return;
+      }
+      var entry = body.entry;
+      var brief = briefOf(entry);
+      stats.ok += 1;
+      slot.holder.textContent = brief || '（无中文释义）';
+      slot.holder.className = 'tr' + (brief ? '' : ' muted');
+      slot.phon.textContent = entry.phonetic && entry.phonetic.us ? '/' + entry.phonetic.us + '/' : '';
+      slot.row.appendChild(makeStar(entry.word, entry, true));
+      var cardHost = el('div', { className: 'row-card', hidden: true });
+      slot.wrap.appendChild(cardHost);
+      slot.main.addEventListener('click', function () {
+        if (cardHost.hidden) {
+          if (!cardHost.dataset.built) {
+            cardHost.appendChild(renderEntry(entry));
+            cardHost.dataset.built = '1';
+          }
+          cardHost.hidden = false;
+          slot.main.setAttribute('aria-expanded', 'true');
+        } else {
+          cardHost.hidden = true;
+          slot.main.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+
+    var nextIndex = 0;
+    function advance() {
+      stats.done += 1;
+      if (stats.done < words.length) {
+        setStatus('正在查 ' + stats.done + ' / ' + words.length + '…', 'live');
+      }
+    }
+    function worker() {
+      if (nextIndex >= slots.length) return Promise.resolve();
+      var slot = slots[nextIndex];
+      nextIndex += 1;
+      return lookupOne(slot.word).then(function (body) {
+        if (mySeq !== seq) return;
+        fill(slot, body);
+        advance();
+        return worker();
+      });
+    }
+
+    var workers = [];
+    var concurrency = Math.min(4, words.length);
+    for (var i = 0; i < concurrency; i += 1) workers.push(worker());
+
+    Promise.all(workers).then(function () {
+      if (mySeq !== seq) return;
+      var summary = '已标注 ' + stats.ok + ' / ' + info.unique + ' 个词';
+      if (stats.missing) summary += '，' + stats.missing + ' 个未收录';
+      if (info.unique > words.length) {
+        summary += '（共 ' + info.unique + ' 个，只查前 ' + words.length + ' 个）';
+      }
+      setStatus(summary);
+    });
+  }
+
+  function runLookup(info, text) {
+    var mySeq = ++seq;
+    results.innerHTML = '';
+    if (!info.words.length) {
+      renderIdle();
+      setStatus('');
+      return;
+    }
+    var tokens = text.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length <= 1) {
+      runSingle(info.words[0], mySeq);
+      return;
+    }
+    if (tokens.length <= 3) {
+      var phrase = normalizeToken(text).toLowerCase().replace(/[^a-z' -]/g, '').replace(/\s+/g, ' ').trim();
+      if (phrase) { runPhrase(phrase, info, mySeq); return; }
+    }
+    runBatch(info, mySeq);
+  }
+
+  function scheduleLookup(immediate) {
+    if (timer) clearTimeout(timer);
+    var text = input.value;
+    var info = extractWords(text);
+    var trimmed = text.trim();
+
+    if (!info.words.length) {
+      seq += 1;
+      if (!trimmed) { renderIdle(); setStatus(''); }
+      else { results.innerHTML = ''; setStatus('没有检测到英文单词'); }
+      return;
+    }
+    if (info.words.length === 1 && info.words[0].length < 2) {
+      seq += 1;
+      results.innerHTML = '';
+      setStatus('再输入一个字母…');
+      return;
+    }
+    var delay = immediate ? 0 : (trimmed.split(/\s+/).length <= 3 ? 420 : 700);
+    timer = setTimeout(function () { runLookup(info, trimmed); }, delay);
+  }
+
+  function renderBook() {
+    countEl.textContent = String(wordbook.length);
+    bookList.innerHTML = '';
+    exportBtn.disabled = wordbook.length === 0;
+    clearBtn.disabled = wordbook.length === 0;
+
+    if (!wordbook.length) {
+      bookList.appendChild(el('li', { className: 'empty' }, [
+        el('b', { text: '生词本还是空的。' }),
+        el('div', { text: '查词后点卡片上的「☆ 收藏」，词就留在这台设备的浏览器里。' }),
+      ]));
+      return;
+    }
+    wordbook.forEach(function (item) {
+      var li = el('li', { className: 'book-item' }, [
+        el('button', {
+          className: 'link', type: 'button',
+          onclick: function () {
+            switchTab('lookup');
+            input.value = item.word;
+            scheduleLookup(true);
+          },
+        }, [
+          el('span', { className: 'w', text: item.word }),
+          el('span', { className: 'b', text: (item.phonetic ? '/' + item.phonetic + '/  ' : '') + (item.brief || '') }),
+        ]),
+        el('button', {
+          className: 'x', type: 'button', 'aria-label': '删除「' + item.word + '」',
+          onclick: function () {
+            if (!window.confirm('从生词本删除「' + item.word + '」？')) return;
+            applyWordbook(removeWord(item.word));
+            toast('已删除「' + item.word + '」');
+          },
+        }, ['×']),
+      ]);
+      bookList.appendChild(li);
+    });
+  }
+
+  function switchTab(name) {
+    Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (btn) {
+      btn.setAttribute('aria-selected', btn.dataset.tab === name ? 'true' : 'false');
+    });
+    viewLookup.hidden = name !== 'lookup';
+    viewBook.hidden = name !== 'book';
+    window.scrollTo(0, 0);
+    if (name === 'book') renderBook();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.tabs button'), function (btn) {
+    btn.addEventListener('click', function () { switchTab(btn.dataset.tab); });
+  });
+
+  input.addEventListener('input', function () { scheduleLookup(false); });
+  input.addEventListener('keydown', function (event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      if (timer) clearTimeout(timer);
+      runLookup(extractWords(input.value), input.value);
+    }
+  });
+
+  document.getElementById('clear-input').addEventListener('click', function () {
+    input.value = '';
+    seq += 1;
+    renderIdle();
+    setStatus('');
+    input.focus();
+  });
+
+  exportBtn.addEventListener('click', function () {
+    if (!wordbook.length) return;
+    var lines = ['单词,音标,中文释义,添加时间'];
+    wordbook.forEach(function (item) {
+      var cells = [
+        item.word,
+        item.phonetic || '',
+        item.brief || '',
+        new Date(item.addedAt || Date.now()).toISOString().slice(0, 10),
+      ].map(function (cell) { return '"' + String(cell).replace(/"/g, '""') + '"'; });
+      lines.push(cells.join(','));
+    });
+    var blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = '生词本-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+    toast('已导出 ' + wordbook.length + ' 个词');
+  });
+
+  clearBtn.addEventListener('click', function () {
+    if (!wordbook.length) return;
+    if (!window.confirm('清空生词本里的 ' + wordbook.length + ' 个词？此操作不可撤销。')) return;
+    wordbook = [];
+    persistBook(wordbook);
+    applyWordbook(wordbook);
+    toast('生词本已清空');
+  });
+
+  function prefillFromUrl() {
+    var raw = '';
+    var hash = String(location.hash || '').replace(/^#/, '');
+    var search = String(location.search || '').replace(/^\?/, '');
+    if (hash.indexOf('q=') === 0) raw = hash;
+    else if (search) raw = search;
+    if (!raw) return;
+    var text = '';
+    try { text = new URLSearchParams(raw).get('q') || ''; } catch (e) { text = ''; }
+    if (!text) return;
+    input.value = text;
+    try { history.replaceState(null, '', location.pathname); } catch (e) { /* ignore */ }
+    scheduleLookup(true);
+  }
+
+  function boot() {
+    renderIdle();
+    serverState.textContent = '本地词库 · 离线可用';
+    applyWordbook(loadBook());
+    window.addEventListener('online', function () { serverState.textContent = '本地词库 · 离线可用'; });
+    window.addEventListener('offline', function () { serverState.textContent = '离线 · 词库在本机'; });
+  }
+
+  boot();
+  prefillFromUrl();
+})();
+
+</script>
+</body>
+</html>
