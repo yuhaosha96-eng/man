@@ -1379,7 +1379,44 @@
     return { ok: res.ok, status: res.status, body: body };
   }
 
+  var cloudRunning = null;
+
+  function sleep(ms) {
+    return new Promise(function (resolve) { setTimeout(resolve, ms); });
+  }
+
+  function cloudFail(silent, status, detail) {
+    state.cloud.lastStatus = '失败 ' + status;
+    saveCloud();
+    updateMeta();
+    refreshCloudStatus();
+    if (!silent) toast('云端备份失败（' + status + '）' + (detail ? '：' + detail : ''), true);
+    return false;
+  }
+
+  function cloudOk(silent) {
+    state.cloud.lastAt = Date.now();
+    state.cloud.lastStatus = '成功';
+    saveCloud();
+    updateMeta();
+    refreshCloudStatus();
+    if (!silent) toast('已备份到云端');
+    return true;
+  }
+
   async function cloudBackup(silent) {
+    if (cloudRunning) return cloudRunning;
+    cloudRunning = runCloudBackup(silent).then(function (result) {
+      cloudRunning = null;
+      return result;
+    }, function (error) {
+      cloudRunning = null;
+      return cloudFail(silent, '网络', error && error.message);
+    });
+    return cloudRunning;
+  }
+
+  async function runCloudBackup(silent) {
     if (!state.cloud.enabled || !state.cloud.token) {
       if (!silent) toast('先在设置里开启云端备份并填 token', true);
       return false;
@@ -1396,38 +1433,29 @@
     }
     var path = state.cloud.path || 'backup/notebook.json';
     var endpoint = '/repos/' + parts[0] + '/' + parts[1] + '/contents/' + path;
-    try {
+    var content = b64EncodeUtf8(json);
+
+    for (var attempt = 0; attempt < 3; attempt += 1) {
       var existing = await cloudApi(endpoint);
       var sha = existing.ok && existing.body && existing.body.sha ? existing.body.sha : null;
       var payload = {
         message: 'Vocab notebook backup ' + new Date().toISOString().slice(0, 16).replace('T', ' '),
-        content: b64EncodeUtf8(json),
+        content: content,
       };
       if (sha) payload.sha = sha;
+
       var put = await cloudApi(endpoint, { method: 'PUT', body: JSON.stringify(payload) });
-      if (!put.ok) {
-        state.cloud.lastStatus = '失败 ' + put.status;
-        saveCloud();
-        updateMeta();
-        refreshCloudStatus();
-        if (!silent) toast('云端备份失败（' + put.status + '），检查 token 权限', true);
-        return false;
+      if (put.ok) return cloudOk(silent);
+
+      // 409 means someone else wrote first (or the cached sha is stale): refetch and retry
+      if (put.status === 409 && attempt < 2) {
+        await sleep(500);
+        continue;
       }
-      state.cloud.lastAt = Date.now();
-      state.cloud.lastStatus = '成功';
-      saveCloud();
-      updateMeta();
-      refreshCloudStatus();
-      if (!silent) toast('已备份到云端');
-      return true;
-    } catch (error) {
-      state.cloud.lastStatus = '失败（网络）';
-      saveCloud();
-      updateMeta();
-        refreshCloudStatus();
-      if (!silent) toast('云端备份失败，检查网络', true);
-      return false;
+      var detail = put.body && put.body.message ? String(put.body.message).slice(0, 60) : '';
+      return cloudFail(silent, put.status, detail);
     }
+    return cloudFail(silent, 409);
   }
 
   function scheduleCloudBackup() {
