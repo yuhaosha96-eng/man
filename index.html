@@ -618,26 +618,39 @@
     return dbPromise;
   }
 
-  async function dbRead() {
+  async function dbGet(key) {
     var db = await openDb();
     if (!db) return null;
     return new Promise(function (resolve) {
       var tx = db.transaction(STORE, 'readonly');
-      var req = tx.objectStore(STORE).get('doc');
+      var req = tx.objectStore(STORE).get(key);
       req.onsuccess = function () { resolve(req.result || null); };
       req.onerror = function () { resolve(null); };
     });
   }
 
-  async function dbWrite(doc) {
+  async function dbPut(key, value) {
     var db = await openDb();
     if (!db) return false;
     return new Promise(function (resolve) {
       var tx = db.transaction(STORE, 'readwrite');
-      tx.objectStore(STORE).put(doc, 'doc');
+      tx.objectStore(STORE).put(value, key);
       tx.oncomplete = function () { resolve(true); };
       tx.onerror = function () { resolve(false); };
     });
+  }
+
+  function dbRead() { return dbGet('doc'); }
+  function dbWrite(doc) { return dbPut('doc', doc); }
+
+  function wordCountOf(doc) {
+    if (!doc) return 0;
+    var pages = doc.pages || (doc.entries ? [{ entries: doc.entries }] : []);
+    var total = 0;
+    pages.forEach(function (pg) {
+      (pg.entries || []).forEach(function (entry) { if (entry.word) total += 1; });
+    });
+    return total;
   }
 
   var saveTimer = null;
@@ -683,6 +696,18 @@
   async function persist() {
     if (!state.loaded) return;
     var doc = serializeDoc();
+    var words = wordCountOf(doc);
+    if (words === 0 && (state.lastWordCount || 0) > 0 && !state.allowEmptySave) {
+      toast('检测到内容异常（0 词），已暂停保存以免覆盖旧数据', true);
+      state.dirty = false;
+      updateMeta();
+      return;
+    }
+    if (words > 0) state.lastWordCount = words;
+    try {
+      var current = await dbGet('doc');
+      if (wordCountOf(current) > 0) await dbPut('prev', current);
+    } catch (error) {}
     var ok = await dbWrite(doc);
     try {
       var mirror = JSON.parse(JSON.stringify(doc));
@@ -694,6 +719,7 @@
       localStorage.setItem(MIRROR_KEY, JSON.stringify(mirror));
     } catch (error) { /* quota */ }
     state.dirty = false;
+    state.allowEmptySave = false;
     if (ok) state.savedAt = doc.savedAt;
     updateMeta();
     if (!ok) toast('存储写入失败，请立即导出备份', true);
@@ -2035,6 +2061,7 @@
   });
   document.getElementById('btn-clear').addEventListener('click', function () {
     if (!window.confirm('清空全部页面？建议先导出备份。')) return;
+    state.allowEmptySave = true;
     state.pages = [{ id: uid(), createdAt: Date.now(), entries: [] }];
     state.pageIndex = 0;
     renderPage();
@@ -2082,6 +2109,19 @@
         new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 2500); }),
       ]);
     } catch (error) { doc = null; }
+
+    if (!doc || wordCountOf(doc) === 0) {
+      try {
+        var prevDoc = await Promise.race([
+          dbGet('prev'),
+          new Promise(function (resolve) { setTimeout(function () { resolve(null); }, 1500); }),
+        ]);
+        if (prevDoc && wordCountOf(prevDoc) > 0) {
+          doc = prevDoc;
+          state.restoredFromPrev = true;
+        }
+      } catch (error) {}
+    }
 
     var pick = null;
     if (doc && doc.pages && doc.pages.length) pick = doc;
