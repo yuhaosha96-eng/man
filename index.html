@@ -1634,13 +1634,17 @@
   /* --------------------------------------------------------------- cloud */
 
   var CLOUD_KEY = 'vocab-notebook:cloud:v1';
-  state.cloud = { enabled: false, token: '', repo: 'yuhaosha96-eng/man', path: 'backup/notebook.json', lastAt: 0, lastStatus: '' };
+  state.cloud = { enabled: false, token: '', repo: 'yuhaosha96-eng/vocab-backup', path: 'backup/notebook.json', lastAt: 0, lastStatus: '' };
   var cloudTimer = null;
 
   function loadCloud() {
     try {
       var raw = localStorage.getItem(CLOUD_KEY);
       if (raw) state.cloud = Object.assign(state.cloud, JSON.parse(raw));
+      if (state.cloud.repo === 'yuhaosha96-eng/man') {
+        state.cloud.repo = 'yuhaosha96-eng/vocab-backup';
+        saveCloud();
+      }
     } catch (error) {}
   }
 
@@ -1978,7 +1982,7 @@
   document.getElementById('btn-cloud-now').addEventListener('click', function () {
     state.cloud.enabled = document.getElementById('opt-cloud').checked;
     state.cloud.token = document.getElementById('opt-cloud-token').value.trim();
-    state.cloud.repo = document.getElementById('opt-cloud-repo').value.trim() || 'yuhaosha96-eng/man';
+    state.cloud.repo = document.getElementById('opt-cloud-repo').value.trim() || 'yuhaosha96-eng/vocab-backup';
     saveCloud();
     refreshCloudStatus();
     cloudBackup(false);
@@ -1995,7 +1999,7 @@
   document.getElementById('btn-settings').addEventListener('click', function () {
     document.getElementById('opt-cloud').checked = !!state.cloud.enabled;
     document.getElementById('opt-cloud-token').value = state.cloud.token || '';
-    document.getElementById('opt-cloud-repo').value = state.cloud.repo || 'yuhaosha96-eng/man';
+    document.getElementById('opt-cloud-repo').value = state.cloud.repo || 'yuhaosha96-eng/vocab-backup';
     refreshCloudStatus();
   });
 
@@ -2003,7 +2007,7 @@
     state.settings.apiKey = document.getElementById('opt-ai-key').value.trim();
     state.cloud.enabled = document.getElementById('opt-cloud').checked;
     state.cloud.token = document.getElementById('opt-cloud-token').value.trim();
-    state.cloud.repo = document.getElementById('opt-cloud-repo').value.trim() || 'yuhaosha96-eng/man';
+    state.cloud.repo = document.getElementById('opt-cloud-repo').value.trim() || 'yuhaosha96-eng/vocab-backup';
     saveCloud();
     state.settings.examples = document.getElementById('opt-examples').checked;
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(state.settings)); } catch (error) {}
