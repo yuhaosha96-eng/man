@@ -169,6 +169,69 @@
   .hint-empty { color: var(--ink-soft); font-size: 15px; line-height: 1.8; padding: 18px 0; }
   .hint-empty b { color: var(--ink); }
 
+  /* ---------------- quiz ---------------- */
+  .quiz-head {
+    display: flex; align-items: center; gap: 8px;
+    line-height: var(--line); min-height: var(--line);
+    border-bottom: 1px solid rgba(120, 108, 84, 0.16);
+    margin-bottom: 4px;
+  }
+  .quiz-head .title { flex: 1; font-size: 13px; color: var(--ink-soft); letter-spacing: .04em; }
+  .quiz-head button {
+    border: 1px solid rgba(120, 108, 84, 0.3); background: rgba(255,255,255,0.7);
+    color: var(--ink); border-radius: 10px; font: inherit; font-size: 12.5px;
+    font-weight: 650; min-height: 36px; padding: 0 12px;
+  }
+  .quiz-head button.primary { background: var(--ink); color: #fdfaf1; border-color: transparent; }
+  .q-item { position: relative; padding: 2px 0; }
+  .q-item + .q-item { margin-top: 4px; }
+  .q-no {
+    position: absolute; left: -46px; top: 2px; width: 32px; text-align: right;
+    font-size: 11.5px; color: var(--ink-faint); line-height: var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .q-prompt { line-height: var(--line); font-size: 21px; font-weight: 600; color: var(--ink); font-family: Georgia, "Times New Roman", "Songti SC", serif; overflow-wrap: anywhere; }
+  .q-prompt.zh { font-family: inherit; font-size: 17px; font-weight: 500; }
+  .q-blank { line-height: var(--line); height: var(--line); }
+  .q-ans {
+    line-height: var(--line); font-size: 15px; color: #b0442f;
+    display: none; overflow-wrap: anywhere;
+  }
+  .q-ans::before { content: "答案 · "; color: #c98d7f; font-size: 12px; letter-spacing: .06em; }
+  .quiz.revealed .q-ans { display: block; }
+
+  .quiz-banner {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    top: calc(58px + env(safe-area-inset-top));
+    z-index: 25; width: min(620px, calc(100vw - 24px));
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 14px;
+    background: rgba(26, 34, 51, 0.94); color: #fdfaf1;
+    box-shadow: 0 12px 30px rgba(20, 16, 8, 0.3);
+    font-size: 13.5px; line-height: 1.5;
+  }
+  .quiz-banner .grow { flex: 1; }
+  .quiz-banner button {
+    flex: none; border: 0; border-radius: 10px; height: 34px; padding: 0 12px;
+    font: inherit; font-size: 13px; font-weight: 700;
+    background: #fdfaf1; color: #1a2233;
+  }
+  .quiz-banner button.ghost { background: transparent; color: rgba(253,250,241,0.7); padding: 0 6px; }
+
+  .seg { display: flex; gap: 6px; margin-top: 6px; }
+  .seg button {
+    flex: 1; min-height: 42px; border-radius: 11px; font: inherit; font-size: 15px; font-weight: 600;
+    border: 1px solid rgba(120, 108, 84, 0.3); background: #fff; color: var(--ink);
+  }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: #fdfaf1; border-color: transparent; }
+  .quiz-grid { display: flex; gap: 10px; margin-top: 10px; }
+  .quiz-grid label { flex: 1; display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .quiz-grid input {
+    width: 62px; min-height: 42px; text-align: center; border-radius: 11px;
+    border: 1px solid rgba(120, 108, 84, 0.3); background: #fff; font: inherit; font-size: 16px; color: var(--ink);
+  }
+  .quiz-progress { font-size: 12.5px; color: var(--ink-faint); margin: 0 0 4px; }
+
   /* ---------------- dock ---------------- */
   .dock {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
@@ -304,6 +367,7 @@
     <div class="meta" id="meta">载入中…</div>
   </div>
   <div class="grow"></div>
+  <button type="button" class="iconbtn" id="btn-quiz">默写</button>
   <button type="button" class="iconbtn" id="btn-backup">备份</button>
   <button type="button" class="iconbtn" id="btn-settings">设置</button>
 </div>
@@ -357,6 +421,33 @@
   </div>
   <button type="button" id="pen-done" title="完成" class="pen-done">✓</button>
 </div>
+
+<dialog id="dlg-quiz">
+  <div class="dlg">
+    <h2>出默写卷</h2>
+    <p class="quiz-progress" id="quiz-progress"></p>
+    <div class="quiz-grid">
+      <label>每 <input type="number" id="q-days" min="1" max="365" inputmode="numeric"> 天</label>
+      <label>每 <input type="number" id="q-words" min="1" max="999" inputmode="numeric"> 个词</label>
+    </div>
+    <p class="tip" style="font-size:12px;color:#8b93a0;margin:6px 0 0;line-height:1.6">任一条件到点，首页会出现提醒；也可以随时手动出卷。</p>
+    <label>默写方向</label>
+    <div class="seg" id="q-dir">
+      <button type="button" data-dir="en2zh" aria-pressed="true">英译汉</button>
+      <button type="button" data-dir="zh2en" aria-pressed="false">汉译英</button>
+    </div>
+    <label>题量</label>
+    <div class="seg" id="q-size">
+      <button type="button" data-size="10" aria-pressed="false">10</button>
+      <button type="button" data-size="20" aria-pressed="true">20</button>
+      <button type="button" data-size="30" aria-pressed="false">30</button>
+    </div>
+    <div class="rowbtns">
+      <button type="button" data-close>取消</button>
+      <button type="button" class="primary" id="btn-quiz-generate">生成试卷</button>
+    </div>
+  </div>
+</dialog>
 
 <dialog id="dlg-settings">
   <div class="dlg">
@@ -420,6 +511,12 @@
 </dialog>
 
 <input type="file" id="file-image" accept="image/*" hidden>
+
+<div class="quiz-banner" id="quiz-banner" hidden>
+  <span class="grow" id="quiz-banner-text"></span>
+  <button type="button" id="quiz-banner-go">出卷</button>
+  <button type="button" class="ghost" id="quiz-banner-close">×</button>
+</div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -930,6 +1027,7 @@
   function ensureTrailingBlank() {
     var pg = page();
     if (!pg) return null;
+    if (pg.kind === 'quiz') return null;
     var last = pg.entries[pg.entries.length - 1];
     if (!last) return addEntry('');
     if (last.kind === 'word' && !last.word) return last;
@@ -949,6 +1047,13 @@
 
   function addEntry(word, options) {
     var pg = page();
+    if (pg.kind === 'quiz') {
+      var fresh = { id: uid(), createdAt: Date.now(), kind: 'words', ink: [], entries: [] };
+      state.pages.push(fresh);
+      state.pageIndex = state.pages.length - 1;
+      renderPage();
+      pg = fresh;
+    }
     var entry = {
       id: uid(), kind: 'word', word: normalizeWord(word || ''), note: '',
       status: 'empty', dict: null, examples: [], usage: '', ai: null,
@@ -1004,10 +1109,10 @@
   function renumber() {
     var pg = page();
     if (!pg) return;
-    pg.entries.forEach(function (entry, index) {
+    (pg.entries || []).forEach(function (entry, index) {
       if (entry.refs) entry.refs.num.textContent = String(index + 1);
     });
-    els.hint.hidden = pg.entries.some(function (entry) { return entry.word || entry.kind === 'image'; });
+    els.hint.hidden = pg.kind === 'quiz' || (pg.entries || []).some(function (entry) { return entry.word || entry.kind === 'image'; });
     els.pageLabel.textContent = (state.pageIndex + 1) + ' / ' + state.pages.length;
     els.pageno.textContent = '第 ' + (state.pageIndex + 1) + ' 页';
     els.prev.disabled = state.pageIndex <= 0;
@@ -1020,9 +1125,13 @@
   function renderPage() {
     var pg = page();
     els.entries.textContent = '';
-    (pg.entries || []).forEach(function (entry) {
-      els.entries.appendChild(createEntryView(entry));
-    });
+    if (pg.kind === 'quiz') {
+      renderQuizPage(pg);
+    } else {
+      (pg.entries || []).forEach(function (entry) {
+        els.entries.appendChild(createEntryView(entry));
+      });
+    }
     renumber();
     els.stage.scrollTop = 0;
   }
@@ -1311,6 +1420,217 @@
   document.getElementById('pen-done').addEventListener('click', function () { setPenMode(false); });
   window.addEventListener('resize', inkRedrawSoon);
 
+  /* ---------------------------------------------------------------- quiz */
+
+  var QUIZ_KEY = 'vocab-notebook:quiz:v1';
+  state.quiz = { days: 7, words: 30, direction: 'en2zh', size: 20, lastAt: 0, enabled: true };
+
+  function loadQuiz() {
+    try {
+      var raw = localStorage.getItem(QUIZ_KEY);
+      if (raw) state.quiz = Object.assign(state.quiz, JSON.parse(raw));
+    } catch (error) {}
+  }
+
+  function saveQuiz() {
+    try {
+      localStorage.setItem(QUIZ_KEY, JSON.stringify(state.quiz));
+    } catch (error) {}
+  }
+
+  function firstChinese(dict) {
+    if (!dict || !dict.cn) return '';
+    var parts = String(dict.cn).split('；').filter(Boolean);
+    if (!parts.length) return '';
+    return parts[0].replace(/^[a-z]+\.\s*/i, '').trim();
+  }
+
+  function allWords() {
+    var out = [];
+    state.pages.forEach(function (pg) {
+      if (pg.kind === 'quiz') return;
+      (pg.entries || []).forEach(function (entry) {
+        if (!entry.word || !entry.dict) return;
+        var cn = firstChinese(entry.dict);
+        if (!cn) return;
+        out.push({ word: entry.word, cn: cn, at: entry.createdAt || 0, page: pg.id });
+      });
+    });
+    return out;
+  }
+
+  function shuffle(list) {
+    var a = list.slice();
+    for (var i = a.length - 1; i > 0; i -= 1) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function quizDue() {
+    var words = allWords();
+    var since = words.filter(function (item) { return item.at > (state.quiz.lastAt || 0); }).length;
+    var days = (Date.now() - (state.quiz.lastAt || 0)) / 86400000;
+    var dueDays = state.quiz.lastAt ? days : 0;
+    return { words: words.length, since: since, days: dueDays, due: state.quiz.enabled && (since >= state.quiz.words || (state.quiz.lastAt > 0 && dueDays >= state.quiz.days)) };
+  }
+
+  function buildQuiz(options) {
+    var pool = allWords();
+    if (!pool.length) { toast('还没有积累到单词', true); return null; }
+    var recent = pool.filter(function (item) { return item.at > (state.quiz.lastAt || 0); });
+    var picked = shuffle(recent.length >= options.size ? recent : pool).slice(0, options.size);
+    if (picked.length < options.size) {
+      var rest = shuffle(pool.filter(function (item) { return picked.indexOf(item) < 0; }));
+      picked = picked.concat(rest.slice(0, options.size - picked.length));
+    }
+    return {
+      direction: options.direction,
+      size: picked.length,
+      createdAt: Date.now(),
+      revealed: false,
+      items: picked.map(function (item) {
+        return options.direction === 'zh2en'
+          ? { word: item.word, cn: item.cn, prompt: item.cn, answer: item.word }
+          : { word: item.word, cn: item.cn, prompt: item.word, answer: item.cn };
+      }),
+    };
+  }
+
+  function createQuizPage(quiz) {
+    var pg = { id: uid(), createdAt: Date.now(), kind: 'quiz', quiz: quiz, ink: [], entries: [] };
+    state.pages.push(pg);
+    state.pageIndex = state.pages.length - 1;
+    state.quiz.lastAt = Date.now();
+    saveQuiz();
+    renderPage();
+    scheduleSave();
+    return pg;
+  }
+
+  function renderQuizPage(pg) {
+    var quiz = pg.quiz || { items: [], direction: 'en2zh', revealed: false };
+    var wrap = h('div', { className: 'quiz' + (quiz.revealed ? ' revealed' : '') });
+    var head = h('div', { className: 'quiz-head' });
+    head.appendChild(h('span', {
+      className: 'title',
+      text: (quiz.direction === 'zh2en' ? '汉译英' : '英译汉') + ' · ' + (quiz.items || []).length + ' 题 · ' + new Date(quiz.createdAt || Date.now()).toLocaleDateString('zh-CN'),
+    }));
+    head.appendChild(h('button', {
+      type: 'button', text: quiz.revealed ? '收起答案' : '显示答案',
+      onclick: function () {
+        quiz.revealed = !quiz.revealed;
+        wrap.classList.toggle('revealed', quiz.revealed);
+        this.textContent = quiz.revealed ? '收起答案' : '显示答案';
+        scheduleSave();
+      },
+    }));
+    head.appendChild(h('button', {
+      type: 'button', text: '换一份',
+      onclick: function () {
+        var next = buildQuiz({ direction: quiz.direction, size: (quiz.items || []).length || state.quiz.size });
+        if (!next) return;
+        pg.quiz = next;
+        renderPage();
+        scheduleSave();
+        toast('换了一份');
+      },
+    }));
+    head.appendChild(h('button', {
+      type: 'button', text: '删除本页',
+      onclick: function () {
+        if (!window.confirm('删除这份默写卷？')) return;
+        state.pages = state.pages.filter(function (item) { return item !== pg; });
+        state.pageIndex = Math.max(0, Math.min(state.pageIndex, state.pages.length - 1));
+        renderPage();
+        scheduleSave();
+        toast('已删除');
+      },
+    }));
+    wrap.appendChild(head);
+
+    (quiz.items || []).forEach(function (item, index) {
+      var row = h('div', { className: 'q-item' });
+      row.appendChild(h('span', { className: 'q-no', text: String(index + 1) }));
+      row.appendChild(h('div', { className: 'q-prompt' + (quiz.direction === 'zh2en' ? ' zh' : ''), text: item.prompt }));
+      row.appendChild(h('div', { className: 'q-blank' }));
+      row.appendChild(h('div', { className: 'q-ans', text: item.answer }));
+      wrap.appendChild(row);
+    });
+
+    wrap.appendChild(h('p', { className: 'tip', style: 'font-size:12px;color:#939aa8;margin-top:14px;line-height:1.6', text: '用 Pencil 在空行上默写；写完点「显示答案」自查。' }));
+    els.entries.appendChild(wrap);
+  }
+
+  function openQuizDialog() {
+    var stat = quizDue();
+    document.getElementById('q-days').value = state.quiz.days;
+    document.getElementById('q-words').value = state.quiz.words;
+    Array.prototype.forEach.call(document.querySelectorAll('#q-dir button'), function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.dataset.dir === state.quiz.direction));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#q-size button'), function (btn) {
+      btn.setAttribute('aria-pressed', String(Number(btn.dataset.size) === state.quiz.size));
+    });
+    document.getElementById('quiz-progress').textContent = state.quiz.lastAt
+      ? ('上次默写 ' + Math.floor(stat.days) + ' 天前 · 之后新增 ' + stat.since + ' 个词 · 词库共 ' + stat.words + ' 词')
+      : ('还没有默写过 · 词库共 ' + stat.words + ' 词');
+    document.getElementById('dlg-quiz').showModal();
+  }
+
+  function maybeShowQuizBanner() {
+    var stat = quizDue();
+    if (!stat.due || !stat.words) return;
+    var text = state.quiz.lastAt
+      ? ('距上次默写 ' + Math.floor(stat.days) + ' 天，新增 ' + stat.since + ' 个词')
+      : ('已积累 ' + stat.words + ' 个词');
+    document.getElementById('quiz-banner-text').textContent = text + ' —— 现在出一份默写卷？';
+    document.getElementById('quiz-banner').hidden = false;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#q-dir button'), function (btn) {
+    btn.addEventListener('click', function () {
+      state.quiz.direction = btn.dataset.dir;
+      Array.prototype.forEach.call(document.querySelectorAll('#q-dir button'), function (other) {
+        other.setAttribute('aria-pressed', String(other === btn));
+      });
+      saveQuiz();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#q-size button'), function (btn) {
+    btn.addEventListener('click', function () {
+      state.quiz.size = Number(btn.dataset.size);
+      Array.prototype.forEach.call(document.querySelectorAll('#q-size button'), function (other) {
+        other.setAttribute('aria-pressed', String(other === btn));
+      });
+      saveQuiz();
+    });
+  });
+
+  document.getElementById('btn-quiz').addEventListener('click', openQuizDialog);
+  document.getElementById('quiz-banner-go').addEventListener('click', function () {
+    document.getElementById('quiz-banner').hidden = true;
+    openQuizDialog();
+  });
+  document.getElementById('quiz-banner-close').addEventListener('click', function () {
+    document.getElementById('quiz-banner').hidden = true;
+  });
+
+  document.getElementById('btn-quiz-generate').addEventListener('click', function () {
+    var days = Math.max(1, Math.min(365, Number(document.getElementById('q-days').value) || 7));
+    var words = Math.max(1, Math.min(999, Number(document.getElementById('q-words').value) || 30));
+    state.quiz.days = days;
+    state.quiz.words = words;
+    saveQuiz();
+    var quiz = buildQuiz({ direction: state.quiz.direction, size: state.quiz.size });
+    if (!quiz) return;
+    document.getElementById('dlg-quiz').close();
+    document.getElementById('quiz-banner').hidden = true;
+    createQuizPage(quiz);
+    toast('已生成 ' + quiz.items.length + ' 题');
+  });
+
   /* --------------------------------------------------------------- cloud */
 
   var CLOUD_KEY = 'vocab-notebook:cloud:v1';
@@ -1489,6 +1809,8 @@
       return {
         id: pg.id || uid(),
         createdAt: pg.createdAt || Date.now(),
+        kind: pg.kind || 'words',
+        quiz: pg.quiz || null,
         ink: Array.isArray(pg.ink) ? pg.ink : [],
         entries: (pg.entries || []).map(normalizeEntry),
       };
@@ -1773,6 +2095,8 @@
         return {
           id: pg.id || uid(),
           createdAt: pg.createdAt || Date.now(),
+          kind: pg.kind || 'words',
+          quiz: pg.quiz || null,
           ink: Array.isArray(pg.ink) ? pg.ink : [],
           entries: (pg.entries || []).map(normalizeEntry),
         };
